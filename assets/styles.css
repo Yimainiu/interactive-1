@@ -1,5 +1,17 @@
 body {
   background-color: #b5502a;
+  color: #fffaf5;
+}
+
+a {
+  color: #fffaf5;
+  text-decoration-color: currentColor;
+  text-underline-offset: 0.15em;
+}
+
+a:hover,
+a:focus-visible {
+  color: #ffffff;
 }
 
 p {

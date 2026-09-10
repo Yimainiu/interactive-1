@@ -1,3 +1,7 @@
 body {
   background-color: #b5502a;
 }
+
+p {
+  font-style: italic;
+}

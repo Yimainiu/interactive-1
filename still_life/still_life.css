@@ -1,0 +1,43 @@
+* {
+  box-sizing: border-box;
+}
+
+/* Main container */
+main {
+  width: 50vw;
+  height: 45vw;
+  border: 2px solid black;
+  position: relative;
+}
+
+#striped-pumpkin {
+  width: 40%;
+  height: 40%;
+  position: absolute;
+  left: 10%;
+  bottom: 35%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#stalk {
+  width: 10%;
+  height: 20%;
+  background-color: rgb(165, 144, 106);
+}
+
+#pumpkin-fruit {
+  width: 100%;
+  height: 80%;
+  background: #ffa200;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 162, 0, 1) 0%,
+    rgba(68, 117, 0, 1) 25%,
+    rgba(255, 162, 0, 1) 50%,
+    rgba(68, 117, 0, 1) 75%,
+    rgba(255, 162, 0, 1) 100%
+  );
+  border-radius: 50% / 40%;
+}

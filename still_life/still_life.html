@@ -7,18 +7,34 @@
     <link rel="stylesheet" href="still_life.css" />
   </head>
   <body>
-    <a href="https://yimainiu.github.io/interactive-1/index.html">Home</a>
+    <a id="home" href="https://yimainiu.github.io/interactive-1/index.html"
+      >Home</a
+    >
 
-    <!-- Main container (parent) -->
+    <!--
+      Canvas. Every child is a full-size layer that gets cut down by a
+      clip-path polygon, so all coordinates live in one shared 0-100% grid.
+      DOM order = paint order: first element is furthest back.
+    -->
     <main>
-      <!-- Striped pumpkin container (child) -->
-      <div id="striped-pumpkin">
-        <div id="stalk"></div>
-        <div id="pumpkin-fruit"></div>
-      </div>
+      <!-- Table -->
+      <div class="shape" id="table"></div>
+      <div class="shape" id="tablecloth"></div>
 
-      <!-- Candle -->
-      <div id="candle"></div>
+      <!-- Blue bottle -->
+      <div class="shape" id="bottle-body"></div>
+      <div class="shape" id="bouquet"></div>
+
+      <!-- Delicata squash, lying down in front -->
+      <div class="shape" id="delicata"></div>
+
+      <!-- Pumpkin -->
+      <div class="shape" id="pumpkin-stalk"></div>
+      <div class="shape" id="pumpkin-body"></div>
+
+      <!-- Tall pumpkin -->
+      <div class="shape" id="tall-pumpkin-stalk"></div>
+      <div class="shape" id="tall-pumpkin-body"></div>
     </main>
   </body>
 </html>

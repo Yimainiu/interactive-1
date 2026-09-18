@@ -1,43 +1,106 @@
-* {
-  box-sizing: border-box;
-}
-
-/* Main container */
+/* Canvas */
 main {
-  width: 50vw;
-  height: 45vw;
-  border: 2px solid black;
+  width: 90vw;
+  aspect-ratio: 10 / 7;
   position: relative;
+  overflow: hidden;
+  background: #fff;
+  margin: auto;
 }
 
-#striped-pumpkin {
-  width: 40%;
-  height: 40%;
+#home {
+  display: block;
+  text-align: center;
+}
+
+.shape {
   position: absolute;
-  left: 10%;
-  bottom: 35%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  inset: 0;
 }
 
-#stalk {
-  width: 10%;
-  height: 20%;
-  background-color: rgb(165, 144, 106);
+#table {
+  background: #dcab7c;
+  clip-path: polygon(0% 100%, 0% 50%, 100% 70%, 100% 100%);
 }
 
-#pumpkin-fruit {
-  width: 100%;
-  height: 80%;
-  background: #ffa200;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 162, 0, 1) 0%,
-    rgba(68, 117, 0, 1) 25%,
-    rgba(255, 162, 0, 1) 50%,
-    rgba(68, 117, 0, 1) 75%,
-    rgba(255, 162, 0, 1) 100%
+/* Striped cloth laid across the front of the table. */
+#tablecloth {
+  background: repeating-linear-gradient(
+    10deg,
+    #fff9df 0 4%,
+    #f2d78a 4% 5.5%,
+    #fff9df 5.5% 10%
   );
-  border-radius: 50% / 40%;
+  clip-path: polygon(0% 55%, 90% 80%, 90% 100%, 65% 98%, 0% 85%);
+}
+
+#bottle-body {
+  background: rgba(86, 98, 222, 0.55);
+  clip-path: polygon(
+    46.7% 25.6%,
+    53% 25.6%,
+    55.5% 38.2%,
+    56.2% 74.5%,
+    43.8% 74.5%,
+    44.3% 37.7%
+  );
+  transform: translate(-40%, 0%);
+}
+
+#bouquet {
+  background: #d2a05f;
+  clip-path: polygon(
+    44% 33.3%,
+    54% 33.3%,
+    59% 42%,
+    54% 50.7%,
+    46% 50.7%,
+    40% 42.5%
+  );
+  transform: translate(-40%, -20%);
+}
+
+#delicata {
+  background: rgb(247, 151, 55);
+  z-index: 1;
+  clip-path: polygon(32% 70%, 39% 74%, 54.5% 92%, 50% 95%, 28% 88%, 24.5% 79%);
+}
+
+#pumpkin-body {
+  background: repeating-linear-gradient(90deg, #ffa200 0 3%, #447500 3% 6%);
+  clip-path: polygon(
+    43% 57.5%,
+    54% 56%,
+    57% 60%,
+    62% 69%,
+    58% 78%,
+    40% 79%,
+    37% 66%
+  );
+}
+
+#pumpkin-stalk {
+  background: #8b7355;
+  clip-path: polygon(48.5% 58%, 50.8% 50.5%, 52.3% 50.8%, 50.5% 58.5%);
+}
+
+#tall-pumpkin-body {
+  background: #fec563;
+  clip-path: polygon(
+    44% 40%,
+    53% 40%,
+    55% 53%,
+    59% 66%,
+    57% 82%,
+    42% 83%,
+    40% 65%
+  );
+  transform: translate(25%, 0%);
+}
+
+#tall-pumpkin-stalk {
+  background: #8b7355;
+  z-index: 1;
+  clip-path: polygon(45% 45%, 47% 39%, 51% 39%, 51% 45%);
+  transform: translate(25%, 0%);
 }

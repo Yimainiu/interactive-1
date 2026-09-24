@@ -1,0 +1,68 @@
+* {
+  box-sizing: border-box;
+}
+
+/* type */
+#home {
+  display: block;
+  text-align: center;
+}
+
+body {
+  font-family: "Arial", sans-serif;
+}
+
+/* text */
+
+p {
+  font-size: 22px;
+}
+
+/* stack */
+
+.shape {
+  display: inline-block;
+  padding: 20px;
+  vertical-align: top;
+  position: relative;
+}
+
+.circle {
+  width: 300px;
+  height: 300px;
+  border-radius: 150px;
+  background: black;
+}
+
+.oval {
+  width: 300px;
+  height: 100px;
+  background: black;
+  border-radius: 150px / 50px;
+}
+
+.sliver {
+  width: 300px;
+  height: 40px;
+  background: black;
+  border-radius: 150px / 20px;
+  animation-name: blowUp;
+  animation-duration: 2s;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+.circle:hover {
+  background-color: blue;
+  transition: background-color 3s;
+}
+
+@keyframes blowUp {
+  from {
+    height: 40px;
+  }
+  to {
+    height: 300px;
+    background-color: mediumvioletred;
+  }
+}

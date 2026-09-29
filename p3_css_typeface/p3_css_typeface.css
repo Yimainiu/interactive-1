@@ -14,103 +14,96 @@ main {
   padding: 5rem 5rem 5rem;
 }
 
-.letter-d {
+/* 5 x 8 unit grid: 1 unit = 20% of width, 12.5% of height.
+   Top of the box is the cap height, bottom is the baseline. */
+.letter-a {
   --black: #000;
   position: relative;
   display: block;
-  width: min(50vw, 25rem);
-  aspect-ratio: 7 / 10;
+  width: min(50vw, 20rem, 43.75vh);
+  aspect-ratio: 5 / 8;
   padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
 }
 
-.letter-d:focus-visible {
+.letter-a:focus-visible {
   outline: 3px solid #1469ff;
   outline-offset: 0.75rem;
 }
 
-.letter-d span {
+.letter-a span {
   position: absolute;
   display: block;
   background: var(--black);
-  transition: background-color 180ms ease;
+  transition:
+    top 400ms ease,
+    height 400ms ease;
 }
 
-.dot {
-  width: 14.2857%;
-  aspect-ratio: 1;
-  border-radius: 50%;
+/* Lowercase (default) */
+
+.spike {
+  top: 37.5%;
+  width: 20%;
+  height: 12.5%;
 }
 
-.dot-top {
-  top: 0;
+.spike-left {
+  left: 0;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+.spike-right {
+  left: 80%;
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+
+.crossbar {
+  top: 53.125%;
+  left: 20%;
+  width: 60%;
+  height: 12.5%;
+  border-radius: 999px;
+}
+
+.stem {
+  top: 68.75%;
+  width: 20%;
+  height: 31.25%;
+  border-radius: 999px;
+}
+
+.stem-left {
   left: 0;
 }
 
-.dot-bottom {
-  bottom: 0;
-  left: 0;
+.stem-right {
+  left: 80%;
 }
 
-.bar-top,
-.bar-bottom {
-  left: 14.2857%;
-  width: 71.4286%;
-  height: 10%;
-}
+/* Uppercase (hover / focus) */
 
-.bar-top {
+.letter-a:hover .spike,
+.letter-a:focus-visible .spike {
   top: 0;
+  height: 18.75%;
 }
 
-.bar-bottom {
-  bottom: 0;
+.letter-a:hover .crossbar,
+.letter-a:focus-visible .crossbar {
+  top: 25%;
 }
 
-.bar-left,
-.bar-right {
-  top: 10%;
-  width: 14.2857%;
-  height: 80%;
+.letter-a:hover .stem,
+.letter-a:focus-visible .stem {
+  top: 43.75%;
+  height: 56.25%;
 }
 
-.bar-left {
-  left: 0;
-}
-
-.bar-right {
-  right: 0;
-}
-
-.curve {
-  right: 0;
-  width: 14.2857%;
-  aspect-ratio: 1;
-}
-
-.curve-top {
-  top: 0;
-  border-radius: 0 0 100% 0;
-}
-
-.curve-bottom {
-  bottom: 0;
-  border-radius: 0 100% 0 0;
-}
-
-.letter-d:hover .dot,
-.letter-d:focus-visible .dot {
-  background: #f10d0d;
-}
-
-.letter-d:hover .curve,
-.letter-d:focus-visible .curve {
-  background: #f000df;
-}
-
-.letter-d:hover .bar-right,
-.letter-d:focus-visible .bar-right {
-  background: #1dff00;
+@media (prefers-reduced-motion: reduce) {
+  .letter-a span {
+    transition: none;
+  }
 }

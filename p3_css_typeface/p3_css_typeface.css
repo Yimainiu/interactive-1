@@ -1,0 +1,116 @@
+* {
+  box-sizing: border-box;
+}
+
+#home {
+  display: block;
+  text-align: center;
+}
+
+main {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 5rem 5rem 5rem;
+}
+
+.letter-d {
+  --black: #000;
+  position: relative;
+  display: block;
+  width: min(50vw, 25rem);
+  aspect-ratio: 7 / 10;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.letter-d:focus-visible {
+  outline: 3px solid #1469ff;
+  outline-offset: 0.75rem;
+}
+
+.letter-d span {
+  position: absolute;
+  display: block;
+  background: var(--black);
+  transition: background-color 180ms ease;
+}
+
+.dot {
+  width: 14.2857%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.dot-top {
+  top: 0;
+  left: 0;
+}
+
+.dot-bottom {
+  bottom: 0;
+  left: 0;
+}
+
+.bar-top,
+.bar-bottom {
+  left: 14.2857%;
+  width: 71.4286%;
+  height: 10%;
+}
+
+.bar-top {
+  top: 0;
+}
+
+.bar-bottom {
+  bottom: 0;
+}
+
+.bar-left,
+.bar-right {
+  top: 10%;
+  width: 14.2857%;
+  height: 80%;
+}
+
+.bar-left {
+  left: 0;
+}
+
+.bar-right {
+  right: 0;
+}
+
+.curve {
+  right: 0;
+  width: 14.2857%;
+  aspect-ratio: 1;
+}
+
+.curve-top {
+  top: 0;
+  border-radius: 0 0 100% 0;
+}
+
+.curve-bottom {
+  bottom: 0;
+  border-radius: 0 100% 0 0;
+}
+
+.letter-d:hover .dot,
+.letter-d:focus-visible .dot {
+  background: #f10d0d;
+}
+
+.letter-d:hover .curve,
+.letter-d:focus-visible .curve {
+  background: #f000df;
+}
+
+.letter-d:hover .bar-right,
+.letter-d:focus-visible .bar-right {
+  background: #1dff00;
+}

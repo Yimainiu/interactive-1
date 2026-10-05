@@ -11,14 +11,18 @@
       >Home</a
     >
 
-    <main>
-      <button class="letter-a" type="button" aria-label="Decorative letter A">
-        <span class="spike spike-left" aria-hidden="true"></span>
-        <span class="spike spike-right" aria-hidden="true"></span>
-        <span class="crossbar" aria-hidden="true"></span>
-        <span class="stem stem-left" aria-hidden="true"></span>
-        <span class="stem stem-right" aria-hidden="true"></span>
+    <header>
+      <h1>Collective Alphabet</h1>
+      <p class="hint">Hover over a letter to switch it from lowercase to uppercase.</p>
+      <button id="case-toggle" class="case-toggle" type="button" aria-pressed="false">
+        Show uppercase
       </button>
+    </header>
+
+    <main>
+      <div id="specimen" class="specimen"></div>
     </main>
+
+    <script src="p3_css_typeface.js"></script>
   </body>
 </html>

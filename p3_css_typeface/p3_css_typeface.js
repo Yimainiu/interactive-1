@@ -206,7 +206,6 @@ const GLYPHS = {
 
 // ---- rendering ----
 
-const TILE_WIDTH = 9; // units; each tile is 9 x 12 units
 const TILE_TOP = -1; // first visible row of the grid
 
 function radiusCss(shape) {
@@ -219,8 +218,8 @@ function radiusCss(shape) {
   return `${xs} / ${ys}`;
 }
 
-// Horizontal centre of the visible parts, so each case is centred on its own.
-function centreOf(shapes) {
+// Horizontal extent [left, right] of the visible parts.
+function extentOf(shapes) {
   let min = Infinity;
   let max = -Infinity;
   for (const s of shapes) {
@@ -230,6 +229,12 @@ function centreOf(shapes) {
     min = Math.min(min, s.cx - half);
     max = Math.max(max, s.cx + half);
   }
+  return [min, max];
+}
+
+// Centre of the visible parts, so each case is centred on its own.
+function centreOf(shapes) {
+  const [min, max] = extentOf(shapes);
   return (min + max) / 2;
 }
 
@@ -243,41 +248,76 @@ function setState(el, prefix, shape, shiftX) {
   el.style.setProperty(`--${prefix}opacity`, shape.hidden ? 0 : 1);
 }
 
+// A letter that is lowercase by default and uppercase on hover / focus.
+// width is the letter box width in grid units, either one number for both
+// cases or [lowercase, uppercase]. Standalone letters are buttons; letters
+// inside a word are plain spans, because the whole word is the hover target.
+function createLetter(letter, width, className, standalone = true) {
+  const parts = GLYPHS[letter];
+  const [lowerWidth, upperWidth] = Array.isArray(width) ? width : [width, width];
+  const lowerShift = lowerWidth / 2 - centreOf(parts.map((p) => p[0]));
+  const upperShift = upperWidth / 2 - centreOf(parts.map((p) => p[1]));
+
+  const el = document.createElement(standalone ? "button" : "span");
+  el.className = `letter ${className}`;
+  if (standalone) {
+    el.type = "button";
+    el.setAttribute("aria-label", `Letter ${letter}`);
+  }
+
+  const glyph = document.createElement("span");
+  glyph.className = "glyph";
+  glyph.setAttribute("aria-hidden", "true");
+
+  for (const [lower, upper] of parts) {
+    const part = document.createElement("span");
+    part.className = "part";
+    setState(part, "l", lower, lowerShift);
+    setState(part, "u", upper, upperShift);
+    const clip = lower.clip || upper.clip;
+    if (clip) part.style.clipPath = clip;
+    glyph.append(part);
+  }
+
+  el.style.setProperty("--lbox", lowerWidth);
+  el.style.setProperty("--ubox", upperWidth);
+  el.append(glyph);
+  return el;
+}
+
+// Word letters are proportionally spaced: each box is the glyph's own width
+// plus LETTER_SPACING, and the box width animates with the case change.
+const LETTER_SPACING = 1.5;
+
+function renderWord(container, word) {
+  for (const letter of word.toUpperCase()) {
+    const widths = [0, 1].map((i) => {
+      const [min, max] = extentOf(GLYPHS[letter].map((p) => p[i]));
+      return max - min + LETTER_SPACING;
+    });
+    container.append(createLetter(letter, widths, "word-letter", false));
+  }
+}
+
 function renderSpecimen(container) {
-  for (const [letter, parts] of Object.entries(GLYPHS)) {
-    const lowerShift = TILE_WIDTH / 2 - centreOf(parts.map((p) => p[0]));
-    const upperShift = TILE_WIDTH / 2 - centreOf(parts.map((p) => p[1]));
-
-    const tile = document.createElement("button");
-    tile.className = "tile";
-    tile.type = "button";
-    tile.setAttribute("aria-label", `Letter ${letter}`);
-
+  for (const letter of Object.keys(GLYPHS)) {
+    const tile = createLetter(letter, 9, "tile");
     const label = document.createElement("span");
     label.className = "tile-label";
     label.setAttribute("aria-hidden", "true");
     label.textContent = letter + letter.toLowerCase();
-
-    const glyph = document.createElement("span");
-    glyph.className = "glyph";
-    glyph.setAttribute("aria-hidden", "true");
-
-    for (const [lower, upper] of parts) {
-      const part = document.createElement("span");
-      part.className = "part";
-      setState(part, "l", lower, lowerShift);
-      setState(part, "u", upper, upperShift);
-      const clip = lower.clip || upper.clip;
-      if (clip) part.style.clipPath = clip;
-      glyph.append(part);
-    }
-
-    tile.append(label, glyph);
+    tile.prepend(label);
     container.append(tile);
   }
 }
 
+renderWord(document.getElementById("hero-word"), "maple");
 renderSpecimen(document.getElementById("specimen"));
+
+// Enable transitions only after the first paint, so nothing animates on load.
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => document.body.classList.add("is-ready"));
+});
 
 const toggle = document.getElementById("case-toggle");
 toggle.addEventListener("click", () => {

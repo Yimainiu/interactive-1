@@ -22,8 +22,46 @@ body {
   text-align: center;
 }
 
+/* "maple" set in the typeface */
+.hero {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem 0;
+}
+
+/* 1em = one grid unit; sized so the widest (uppercase) word still fits */
+.hero-word {
+  display: flex;
+  font-size: min(calc((100vw - 2rem) / 34), 1.5rem);
+}
+
+/* Box width follows the glyph, so the word reflows as a letter changes case. */
+.word-letter {
+  font-size: inherit;
+  width: calc(var(--lbox) * 1em);
+  height: 12em;
+}
+
+.word-letter .glyph {
+  font-size: inherit;
+}
+
+.hero-word:hover .word-letter,
+.hero-word:focus-visible .word-letter {
+  width: calc(var(--ubox) * 1em);
+}
+
+.hero-word {
+  cursor: pointer;
+}
+
+.hero-word:focus-visible {
+  outline: 3px solid #1469ff;
+  outline-offset: 0.5rem;
+}
+
 header {
-  padding: 2.5rem 1rem 2rem;
+  padding: 1.5rem 1rem 2rem;
   text-align: center;
 }
 
@@ -69,18 +107,25 @@ main {
   border-left: 1px solid var(--rule);
 }
 
-/* Each tile is 9 x 12 grid units: cap line at row 1, baseline at row 9. */
-.tile {
+/* Shared by the hero word and the specimen tiles.
+   Cap line sits at row 1 and the baseline at row 9 of the letter box. */
+.letter {
   position: relative;
   container-type: inline-size;
   display: block;
-  aspect-ratio: 9 / 12;
   padding: 0;
   border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Each tile is 9 x 12 grid units. */
+.tile {
+  --cols: 9;
+  aspect-ratio: 9 / 12;
   border-right: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
   background: var(--paper);
-  cursor: pointer;
 }
 
 .tile:focus-visible {
@@ -102,7 +147,7 @@ main {
 .glyph {
   position: absolute;
   inset: 0;
-  font-size: calc(100cqw / 9);
+  font-size: calc(100cqw / var(--cols));
 }
 
 .part {
@@ -118,14 +163,20 @@ main {
   background: var(--ink);
   /* hides anti-aliasing seams where two parts touch */
   box-shadow: 0 0 0 0.5px var(--ink);
+}
+
+.is-ready .part,
+.is-ready .word-letter {
   transition-property: left, top, width, height, border-radius, transform, opacity;
   transition-duration: 500ms;
   transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-/* Uppercase (hover / focus / toggle) */
+/* Uppercase (hover / focus / toggle). The hero word switches as a whole. */
 .tile:hover .part,
 .tile:focus-visible .part,
+.hero-word:hover .part,
+.hero-word:focus-visible .part,
 .specimen.is-upper .part {
   left: calc(var(--ux) * 1em);
   top: calc(var(--uy) * 1em);
@@ -137,7 +188,8 @@ main {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .part {
+  .is-ready .part,
+  .is-ready .word-letter {
     transition: none;
   }
 }

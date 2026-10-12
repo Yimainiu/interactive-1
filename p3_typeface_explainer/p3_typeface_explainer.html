@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>[Tong] Typeface Explainer</title>
+    <link rel="stylesheet" href="p3_typeface_explainer.css" />
+  </head>
+  <body>
+    <a id="home" href="../index.html">Home</a>
+
+    <div class="page">
+      <h1>How the letter B is built</h1>
+
+      <!-- ===== Flow chart: the order everything runs in ===== -->
+      <section class="flow" aria-labelledby="flow-title">
+        <h2 id="flow-title">From file to screen: the order everything runs in</h2>
+        <ol class="flow-phases">
+          <li class="phase">
+            <div class="phase-head">
+              <span class="phase-no">1</span>
+              <h3>Read the HTML</h3>
+            </div>
+            <ol class="flow-steps">
+              <li>The browser reads <code>p3_css_typeface.html</code> from top to bottom and builds the DOM as it goes <a class="flow-link" href="#step-4">Step 4</a></li>
+              <li><code>&lt;link&gt;</code> in the head: download the CSS and parse its rules. Nothing uses them yet</li>
+              <li>The body creates <code>#specimen</code>, still empty <a class="flow-link" href="#step-0">Step 0</a></li>
+            </ol>
+          </li>
+
+          <li class="phase">
+            <div class="phase-head">
+              <span class="phase-no">2</span>
+              <h3>Run the JS</h3>
+            </div>
+            <p class="phase-note">Building the DOM pauses at <code>&lt;script&gt;</code> until the JS has run.</p>
+            <ol class="flow-steps">
+              <li>Define the shape functions <code>R</code>, <code>C</code>, … <a class="flow-link" href="#step-2">Step 2</a></li>
+              <li>Build <code>GLYPHS</code>: every <code>R()</code> / <code>C()</code> call runs now, and B becomes 6 shape objects <a class="flow-link" href="#step-3">Step 3</a></li>
+              <li>
+                <code>renderSpecimen</code> reaches B and calls <code>createLetter</code>:
+                <ol class="flow-sub">
+                  <li>work out the shift, −1 <a class="flow-link" href="#step-5">Step 5</a></li>
+                  <li>create the button, <code>.glyph</code> and 3 <code>.part</code>s <a class="flow-link" href="#step-4">Step 4</a></li>
+                  <li><code>setState</code> writes 14 variables onto each part <a class="flow-link" href="#step-6">Step 6</a></li>
+                </ol>
+              </li>
+              <li class="is-key"><code>container.append(tile)</code>: B enters the page DOM <a class="flow-link" href="#step-4">Step 4</a></li>
+              <li>Schedule <code>is-ready</code> and attach the toggle button's listener <a class="flow-link" href="#step-10">Step 10</a></li>
+            </ol>
+          </li>
+
+          <li class="phase">
+            <div class="phase-head">
+              <span class="phase-no">3</span>
+              <h3>Render</h3>
+            </div>
+            <ol class="flow-steps">
+              <li>Match styles: each <code>.part</code> gets <code>left: calc(var(--lx) * 1em)</code> and so on <a class="flow-link" href="#step-7">Step 7</a></li>
+              <li>Layout: 1em = tile width / 9, so the stem's left = 2em, the upper bowl's top = 5em, … <a class="flow-link" href="#step-7">Step 7</a></li>
+              <li class="is-key">Paint: lowercase b appears</li>
+              <li>Two frames later, <code>is-ready</code> turns transitions on. Nothing visible changes <a class="flow-link" href="#step-10">Step 10</a></li>
+            </ol>
+          </li>
+
+          <li class="phase">
+            <div class="phase-head">
+              <span class="phase-no">4</span>
+              <h3>Hover</h3>
+            </div>
+            <ol class="flow-steps">
+              <li><code>:hover</code> matches, so <code>.part</code> reads the <code>--u…</code> variables instead <a class="flow-link" href="#step-8">Step 8</a></li>
+              <li class="is-key">The transition animates the upper bowl's <code>top</code> from 5em to 1em: uppercase B <a class="flow-link" href="#step-9">Step 9</a></li>
+              <li>Mouse leaves: back to <code>--l…</code>, and the bowl slides back down</li>
+            </ol>
+          </li>
+        </ol>
+      </section>
+
+      <!-- ===== Step 0 ===== -->
+      <section class="step" id="step-0">
+        <header class="step-head">
+          <p class="step-no">Step 0</p>
+          <h2>Overview: the HTML is almost empty</h2>
+          <p>
+            In <code>p3_css_typeface.html</code>, the alphabet is just an empty
+            <code>&lt;div id="specimen"&gt;</code>. All 26 letters are created by JS after the page loads.
+          </p>
+          <p>The three files split the work:</p>
+          <ul>
+            <li><strong>JS</strong> stores the shape data for every letter and turns it into HTML elements and CSS variables.</li>
+            <li><strong>CSS</strong> reads those variables to place each part, switches to a second set on hover, and animates the change.</li>
+            <li><strong>HTML</strong> provides an empty container and one button.</li>
+          </ul>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>p3_css_typeface.html · lines 39–43</figcaption>
+<pre data-lang="html" data-hl="2,5">&lt;main&gt;
+  &lt;div id="specimen" class="specimen"&gt;&lt;/div&gt;
+&lt;/main&gt;
+
+&lt;script src="p3_css_typeface.js"&gt;&lt;/script&gt;</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>p3_css_typeface.js · lines 302–315</figcaption>
+<pre data-lang="js" data-hl="2,3,9,14">function renderSpecimen(container) {
+  for (const letter of Object.keys(GLYPHS)) {
+    const tile = createLetter(letter, 9, "tile");
+    const label = document.createElement("span");
+    label.className = "tile-label";
+    label.setAttribute("aria-hidden", "true");
+    label.textContent = letter + letter.toLowerCase();
+    tile.prepend(label);
+    container.append(tile);
+  }
+}
+
+renderWord(document.getElementById("hero-word"), "maple");
+renderSpecimen(document.getElementById("specimen"));</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result</p>
+              <div data-demo="overview"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Step 1 ===== -->
+      <section class="step" id="step-1">
+        <header class="step-head">
+          <p class="step-no">Step 1</p>
+          <h2>The grid: everything is measured in units</h2>
+          <p>
+            Every letter is drawn on graph paper, with x and y counted in grid units. The guide lines:
+            <code>y = 0</code> is the top of capitals (cap line), <code>y = 3</code> is the top of lowercase
+            letters (x-height), <code>y = 8</code> is the baseline, and <code>y = 10</code> is where letters like
+            p and y descend to.
+          </p>
+          <p>
+            Each tile is 9 units wide and 12 units tall. <code>TILE_TOP = -1</code> means the top row of the tile
+            is <code>y = -1</code>, which leaves one empty row above the cap line.
+          </p>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>p3_css_typeface.js · lines 1–4, 209</figcaption>
+<pre data-lang="js" data-hl="2,3,7">// Collective Alphabet
+// Every glyph is drawn on a unit grid: y = 0 is the cap line, y = 3 the
+// x-height, y = 8 the baseline and y = 10 the descender. Each part is a pair
+// [lowercase, uppercase]; CSS transitions between the two on hover.
+// ...
+
+const TILE_TOP = -1; // first visible row of the grid</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>p3_css_typeface.css · lines 122–129</figcaption>
+<pre data-lang="css" data-hl="3,4">/* Each tile is 9 x 12 grid units. */
+.tile {
+  --cols: 9;
+  aspect-ratio: 9 / 12;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result: B on the grid (not centred yet, so the coordinates are easy to read)</p>
+              <div data-demo="grid"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Step 2 ===== -->
+      <section class="step" id="step-2">
+        <header class="step-head">
+          <p class="step-no">Step 2</p>
+          <h2>Shape functions R and C: a few numbers per part</h2>
+          <p>
+            <code>R(x, y, w, h)</code> is a rounded rectangle: <code>(x, y)</code> is its top-left grid cell, and
+            <code>w</code> and <code>h</code> are its width and height. It returns the <strong>centre point</strong>
+            <code>cx</code>, <code>cy</code> rather than the top-left corner, because rotation later happens around the centre.
+          </p>
+          <p>
+            <code>radius</code> defaults to <code>"pill"</code>, half of the shorter side, so both ends become
+            semicircles. <code>C(x, y, d)</code> is just an <code>R</code> with width and height <code>d</code> and
+            radius <code>d / 2</code>, which makes a circle.
+          </p>
+          <p>
+            The file also has <code>Q</code> (quarter circle), <code>S</code> (diagonal stroke) and <code>T</code>
+            (triangle). B doesn't use them.
+          </p>
+          <p>
+            These functions are the toolbox: each call describes <strong>one shape</strong> and nothing more. No
+            letter exists yet. Shapes are put together into letters in the next step.
+          </p>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>p3_css_typeface.js · lines 8–17</figcaption>
+<pre data-lang="js" data-hl="3,4,8,9">// Rectangle; radius is "pill", a number, or [tl, tr, br, bl] where each
+// corner is a number or [rx, ry].
+function R(x, y, w, h, radius = "pill") {
+  return { cx: x + w / 2, cy: y + h / 2, w, h, rot: 0, radius };
+}
+
+// Circle with diameter d.
+function C(x, y, d) {
+  return R(x, y, d, d, d / 2);
+}</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result: one shape at a time. Change the numbers and see what R or C returns</p>
+              <div data-demo="shapes"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Step 3 ===== -->
+      <section class="step" id="step-3">
+        <header class="step-head">
+          <p class="step-no">Step 3</p>
+          <h2>B's data: every part has a lowercase and an uppercase version</h2>
+          <p>
+            This is where the shapes from step 2 are put together into a letter. Each letter in
+            <code>GLYPHS</code> is an array of parts, and each part is a pair:
+            <code>[lowercase shape, uppercase shape]</code>. B has three parts: the stem, the upper bowl and the lower bowl.
+          </p>
+          <p>
+            The stem and the lower bowl are identical in both cases; only the upper bowl differs. In lowercase it
+            sits <strong>exactly on top of</strong> the lower bowl, so the two circles look like one. In uppercase it
+            moves up 4 units. Going from b to B is just one circle sliding up.
+          </p>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>p3_css_typeface.js · lines 53, 61–65</figcaption>
+<pre data-lang="js" data-hl="5">const GLYPHS = {
+  // ...
+  B: [
+    [R(3, 0, 1, 8), R(3, 0, 1, 8)],
+    [C(4, 4, 4), C(4, 0, 4)],
+    [C(4, 4, 4), C(4, 4, 4)],
+  ],
+  // ...
+};</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result: the same parts in both states (colours are translucent, so overlaps look darker)</p>
+              <div data-demo="pairs"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Step 4 ===== -->
+      <section class="step" id="step-4">
+        <header class="step-head">
+          <p class="step-no">Step 4</p>
+          <h2>createLetter: building elements in the DOM</h2>
+          <p>
+            First, an important distinction: <strong>JS never edits the .html file.</strong> The HTML file is just
+            text on disk. When the page opens, the browser reads that text and builds a tree of elements in memory,
+            called the <strong>DOM</strong> (Document Object Model). The screen always shows the DOM, and JS can
+            change the DOM at any time.
+          </p>
+          <p>
+            Take B as the example. The HTML file only contains an empty <code>&lt;div id="specimen"&gt;</code>
+            (highlighted in the first code box), so in the DOM that element starts with no children. Then the
+            script runs: <code>getElementById("specimen")</code> finds that element in the DOM, and
+            <code>renderSpecimen</code> calls <code>createLetter("B", …)</code>, which builds a button containing a
+            label, a <code>.glyph</code> and three <code>.part</code> spans (stem, upper bowl, lower bowl). Finally
+            <code>container.append(tile)</code> puts the button inside <code>#specimen</code>.
+          </p>
+          <p>
+            The file still has an empty div; only the DOM has the B tile. Every reload starts from the file again,
+            and JS rebuilds the tile. In a browser, <em>View Page Source</em> shows the file and <em>Inspect</em>
+            shows the live DOM. P3 does the same thing for all 26 letters.
+          </p>
+          <p>
+            <code>createLetter</code> makes a <code>&lt;button&gt;</code> for each letter (so it can be focused with
+            Tab), puts a <code>.glyph</code> inside it, and adds one <code>.part</code> per shape.
+          </p>
+          <p>
+            The key point: it <strong>never writes</strong> <code>left</code> or <code>top</code> directly. Both the
+            lowercase and uppercase values are stored on the element as CSS variables (<code>--l…</code> and
+            <code>--u…</code>), and CSS decides which set to use. Lines 8–9 (the shift) are covered in step 5, and
+            lines 25–26 (setState) in step 6.
+          </p>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>p3_css_typeface.html · lines 39–43: what the file contains</figcaption>
+<pre data-lang="html" data-hl="2">&lt;main&gt;
+  &lt;div id="specimen" class="specimen"&gt;&lt;/div&gt;
+&lt;/main&gt;
+
+&lt;script src="p3_css_typeface.js"&gt;&lt;/script&gt;</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>p3_css_typeface.js · lines 302–312, 315: find #specimen and fill it</figcaption>
+<pre data-lang="js" data-hl="3,9,13">function renderSpecimen(container) {
+  for (const letter of Object.keys(GLYPHS)) {
+    const tile = createLetter(letter, 9, "tile");
+    const label = document.createElement("span");
+    label.className = "tile-label";
+    label.setAttribute("aria-hidden", "true");
+    label.textContent = letter + letter.toLowerCase();
+    tile.prepend(label);
+    container.append(tile);
+  }
+}
+
+renderSpecimen(document.getElementById("specimen"));</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>p3_css_typeface.js · lines 251–286</figcaption>
+<pre data-lang="js" data-hl="11,12,18,19,22,23,24,25,26,29">// A letter that is lowercase by default and uppercase on hover / focus.
+// width is the letter box width in grid units, either one number for both
+// cases or [lowercase, uppercase]. Standalone letters are buttons; letters
+// inside a word are plain spans, because the whole word is the hover target.
+function createLetter(letter, width, className, standalone = true) {
+  const parts = GLYPHS[letter];
+  const [lowerWidth, upperWidth] = Array.isArray(width) ? width : [width, width];
+  const lowerShift = lowerWidth / 2 - centreOf(parts.map((p) => p[0]));
+  const upperShift = upperWidth / 2 - centreOf(parts.map((p) => p[1]));
+
+  const el = document.createElement(standalone ? "button" : "span");
+  el.className = `letter ${className}`;
+  if (standalone) {
+    el.type = "button";
+    el.setAttribute("aria-label", `Letter ${letter}`);
+  }
+
+  const glyph = document.createElement("span");
+  glyph.className = "glyph";
+  glyph.setAttribute("aria-hidden", "true");
+
+  for (const [lower, upper] of parts) {
+    const part = document.createElement("span");
+    part.className = "part";
+    setState(part, "l", lower, lowerShift);
+    setState(part, "u", upper, upperShift);
+    const clip = lower.clip || upper.clip;
+    if (clip) part.style.clipPath = clip;
+    glyph.append(part);
+  }
+
+  el.style.setProperty("--lbox", lowerWidth);
+  el.style.setProperty("--ubox", upperWidth);
+  el.append(glyph);
+  return el;
+}</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result: the same &lt;main&gt; in the DOM, before and after JS builds B</p>
+              <div data-demo="dom"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Step 5 ===== -->
+      <section class="step" id="step-5">
+        <header class="step-head">
+          <p class="step-no">Step 5</p>
+          <h2>Centring: computing the shift</h2>
+          <p>
+            In the data, B spans x = 3 to 8. The tile is 9 units wide with its centre at 4.5, so drawn as-is the
+            letter sits too far to the right.
+          </p>
+          <p>
+            <code>extentOf</code> finds the leftmost and rightmost edges of all visible parts, accounting for
+            rotation and skipping hidden parts. <code>centreOf</code> takes the midpoint.
+            <code>shift = half the tile width − glyph centre</code>, and it is added to every part's x. Each case is
+            measured separately, so both states are centred on their own.
+          </p>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>p3_css_typeface.js · lines 221–239</figcaption>
+<pre data-lang="js" data-hl="9,10,18">// Horizontal extent [left, right] of the visible parts.
+function extentOf(shapes) {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const s of shapes) {
+    if (s.hidden) continue;
+    const a = (s.rot * Math.PI) / 180;
+    const half = Math.abs((s.w / 2) * Math.cos(a)) + Math.abs((s.h / 2) * Math.sin(a));
+    min = Math.min(min, s.cx - half);
+    max = Math.max(max, s.cx + half);
+  }
+  return [min, max];
+}
+
+// Centre of the visible parts, so each case is centred on its own.
+function centreOf(shapes) {
+  const [min, max] = extentOf(shapes);
+  return (min + max) / 2;
+}</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>Where createLetter uses the shift · lines 258–259, 275–276</figcaption>
+<pre data-lang="js" data-hl="1,2">const lowerShift = lowerWidth / 2 - centreOf(parts.map((p) => p[0]));
+const upperShift = upperWidth / 2 - centreOf(parts.map((p) => p[1]));
+// ...
+setState(part, "l", lower, lowerShift);
+setState(part, "u", upper, upperShift);</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result: tick the box to apply the shift</p>
+              <div data-demo="centre"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Step 6 ===== -->
+      <section class="step" id="step-6">
+        <header class="step-head">
+          <p class="step-no">Step 6</p>
+          <h2>setState: shapes become CSS variables</h2>
+          <p>
+            <code>setState</code> writes a shape as 7 CSS variables, prefixed <code>l</code> for lowercase and
+            <code>u</code> for uppercase. Along the way it:
+          </p>
+          <ul>
+            <li>converts x and y from the centre back to the top-left corner, adding the centring shift and the <code>TILE_TOP</code> offset;</li>
+            <li>uses <code>radiusCss</code> to expand the radius into a full <code>border-radius</code> value;</li>
+            <li>sets hidden parts to opacity 0 (B has none; O, Q, R and S do).</li>
+          </ul>
+          <p>On the right are the real values for B's three parts. Highlighted cells differ between the two cases.</p>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>p3_css_typeface.js · lines 241–249</figcaption>
+<pre data-lang="js" data-hl="2,3">function setState(el, prefix, shape, shiftX) {
+  el.style.setProperty(`--${prefix}x`, shape.cx - shape.w / 2 + shiftX);
+  el.style.setProperty(`--${prefix}y`, shape.cy - shape.h / 2 - TILE_TOP);
+  el.style.setProperty(`--${prefix}w`, shape.w);
+  el.style.setProperty(`--${prefix}h`, shape.h);
+  el.style.setProperty(`--${prefix}rot`, `${shape.rot}deg`);
+  el.style.setProperty(`--${prefix}radius`, radiusCss(shape));
+  el.style.setProperty(`--${prefix}opacity`, shape.hidden ? 0 : 1);
+}</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>p3_css_typeface.js · lines 211–219</figcaption>
+<pre data-lang="js" data-hl="3">function radiusCss(shape) {
+  let corners = shape.radius;
+  if (corners === "pill") corners = Math.min(shape.w, shape.h) / 2;
+  if (!Array.isArray(corners)) corners = [corners, corners, corners, corners];
+  const pairs = corners.map((c) => (Array.isArray(c) ? c : [c, c]));
+  const xs = pairs.map((p) => `${p[0]}em`).join(" ");
+  const ys = pairs.map((p) => `${p[1]}em`).join(" ");
+  return `${xs} / ${ys}`;
+}</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result: the variables written onto B's .part elements</p>
+              <div data-demo="vars"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Step 7 ===== -->
+      <section class="step" id="step-7">
+        <header class="step-head">
+          <p class="step-no">Step 7</p>
+          <h2>CSS: em turns variables into positions</h2>
+          <p>
+            Every size on <code>.part</code> is written as "variable × 1em", so 1em has to equal exactly one grid
+            unit. The font size of <code>.glyph</code> makes that happen:
+            <code>font-size: calc(100cqw / var(--cols))</code>.
+          </p>
+          <p>
+            <code>cqw</code> is 1% of the container's width. <code>.letter</code> sets
+            <code>container-type: inline-size</code>, which makes it the container, so <code>100cqw / 9</code> is one
+            unit. When the tile grows or shrinks, 1em follows and the whole letter scales with it, with no JS
+            involved. Drag the slider to try it.
+          </p>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>p3_css_typeface.css · lines 110–120</figcaption>
+<pre data-lang="css" data-hl="4,5">/* Shared by the hero word and the specimen tiles.
+   Cap line sits at row 1 and the baseline at row 9 of the letter box. */
+.letter {
+  position: relative;
+  container-type: inline-size;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>p3_css_typeface.css · lines 146–166</figcaption>
+<pre data-lang="css" data-hl="5,11,12,13,14">/* 1em = one grid unit */
+.glyph {
+  position: absolute;
+  inset: 0;
+  font-size: calc(100cqw / var(--cols));
+}
+
+.part {
+  position: absolute;
+  display: block;
+  left: calc(var(--lx) * 1em);
+  top: calc(var(--ly) * 1em);
+  width: calc(var(--lw) * 1em);
+  height: calc(var(--lh) * 1em);
+  border-radius: var(--lradius);
+  transform: rotate(var(--lrot));
+  opacity: var(--lopacity);
+  background: var(--ink);
+  /* hides anti-aliasing seams where two parts touch */
+  box-shadow: 0 0 0 0.5px var(--ink);
+}</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result: change the tile width and 1em follows</p>
+              <div data-demo="em"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Step 8 ===== -->
+      <section class="step" id="step-8">
+        <header class="step-head">
+          <p class="step-no">Step 8</p>
+          <h2>Hover: switch variable sets and let transition fill the gap</h2>
+          <p>
+            By default the <code>.part</code> rule reads the <code>--l…</code> variables (lowercase). When the tile
+            is hovered or focused, a more specific selector makes <code>left</code>, <code>top</code>,
+            <code>width</code> and the rest read the <code>--u…</code> variables (uppercase) instead.
+          </p>
+          <p>
+            When a property value changes, <code>transition</code> has the browser animate between the two values
+            over 500ms. That is the whole b-to-B animation: the upper bowl's <code>top</code> slides from 5em to 1em.
+            Slow the transition down to see it clearly.
+          </p>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>p3_css_typeface.css · lines 168–188</figcaption>
+<pre data-lang="css" data-hl="3,4,9,10,13,14,15">.is-ready .part,
+.is-ready .word-letter {
+  transition-property: left, top, width, height, border-radius, transform, opacity;
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Uppercase (hover / focus / toggle). The hero word switches as a whole. */
+.tile:hover .part,
+.tile:focus-visible .part,
+.hero-word:hover .part,
+.hero-word:focus-visible .part,
+.specimen.is-upper .part {
+  left: calc(var(--ux) * 1em);
+  top: calc(var(--uy) * 1em);
+  width: calc(var(--uw) * 1em);
+  height: calc(var(--uh) * 1em);
+  border-radius: var(--uradius);
+  transform: rotate(var(--urot));
+  opacity: var(--uopacity);
+}</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result: hover, press Tab to focus, or use the button</p>
+              <div data-demo="hover"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Step 9 ===== -->
+      <section class="step" id="step-9">
+        <header class="step-head">
+          <p class="step-no">Step 9</p>
+          <h2>Why the upper bowl slides up from below</h2>
+          <p>
+            In lowercase b the upper bowl isn't missing. It sits at <strong>exactly the same position</strong> as the
+            lower bowl, so the two circles look like one (you can see the overlap in the coloured demo in step 3).
+          </p>
+          <p>
+            <code>transition</code> only animates the properties whose values change, from the old value to the
+            new one. For B's upper bowl, only <code>top</code> changes:
+          </p>
+          <div class="table-wrap">
+            <table class="compare">
+              <thead>
+                <tr>
+                  <th>Property</th>
+                  <th>Lowercase</th>
+                  <th>Uppercase</th>
+                  <th>Changes?</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><code>left</code></td><td>3em</td><td>3em</td><td>no</td></tr>
+                <tr><td><strong><code>top</code></strong></td><td><strong>5em</strong></td><td><strong>1em</strong></td><td><strong>yes</strong></td></tr>
+                <tr><td><code>width</code> / <code>height</code></td><td>4em</td><td>4em</td><td>no</td></tr>
+                <tr><td><code>opacity</code></td><td>1</td><td>1</td><td>no</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            So the browser animates only <code>top</code>, from 5em to 1em. The circle starts out hidden behind the
+            lower bowl and slides up from there, which is why it seems to come out from below.
+          </p>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>p3_css_typeface.js · lines 61–65</figcaption>
+<pre data-lang="js" data-hl="3">B: [
+  [R(3, 0, 1, 8), R(3, 0, 1, 8)],
+  [C(4, 4, 4), C(4, 0, 4)],
+  [C(4, 4, 4), C(4, 4, 4)],
+],</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>p3_css_typeface.css · lines 168–173</figcaption>
+<pre data-lang="css" data-hl="3">.is-ready .part,
+.is-ready .word-letter {
+  transition-property: left, top, width, height, border-radius, transform, opacity;
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result: watch the upper bowl's top while it switches</p>
+              <div data-demo="motion"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Step 10 ===== -->
+      <section class="step" id="step-10">
+        <header class="step-head">
+          <p class="step-no">Step 10</p>
+          <h2>Finishing touches: the toggle button and other details</h2>
+          <ul>
+            <li>
+              <strong>Toggle button</strong>: clicking it adds <code>.is-upper</code> to <code>#specimen</code>. The
+              step 8 selector <code>.specimen.is-upper .part</code> applies the same uppercase rules as hover.
+              <code>aria-pressed</code> tells screen readers whether the button is on.
+            </li>
+            <li>
+              <strong>is-ready</strong>: the page draws every letter first and only adds <code>is-ready</code> to
+              <code>body</code>, which turns transitions on, two frames later. That way nothing moves when the page opens.
+            </li>
+            <li>
+              <strong>Seams</strong>: <code>box-shadow: 0 0 0 0.5px</code> on <code>.part</code> grows each part by
+              half a pixel, covering the thin anti-aliasing gaps where two parts meet.
+            </li>
+            <li>
+              <strong>Reduced motion</strong>: when the system's reduce-motion setting is on,
+              <code>prefers-reduced-motion</code> turns the transitions off.
+            </li>
+            <li>
+              <strong>The "maple" heading</strong> also uses <code>createLetter</code>, but with
+              <code>standalone = false</code> (a span instead of a button) and a
+              <code>[lowercase width, uppercase width]</code> pair, so the letter spacing changes with the case.
+            </li>
+          </ul>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>p3_css_typeface.html · lines 29–36</figcaption>
+<pre data-lang="html" data-hl="5">&lt;button
+  id="case-toggle"
+  class="case-toggle"
+  type="button"
+  aria-pressed="false"
+&gt;
+  Show uppercase
+&lt;/button&gt;</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>p3_css_typeface.js · lines 317–328</figcaption>
+<pre data-lang="js" data-hl="3,9,11">// Enable transitions only after the first paint, so nothing animates on load.
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => document.body.classList.add("is-ready"));
+});
+
+const toggle = document.getElementById("case-toggle");
+toggle.addEventListener("click", () => {
+  const upper = toggle.getAttribute("aria-pressed") !== "true";
+  toggle.setAttribute("aria-pressed", String(upper));
+  toggle.textContent = upper ? "Show lowercase" : "Show uppercase";
+  document.getElementById("specimen").classList.toggle("is-upper", upper);
+});</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>p3_css_typeface.css · lines 190–195</figcaption>
+<pre data-lang="css" data-hl="4">@media (prefers-reduced-motion: reduce) {
+  .is-ready .part,
+  .is-ready .word-letter {
+    transition: none;
+  }
+}</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result: the same toggle button as on the P3 page</p>
+              <div data-demo="final"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== How the 26 tiles line up ===== -->
+      <section class="step" id="tile-grid">
+        <header class="step-head">
+          <p class="step-no">Extra</p>
+          <h2>How the 26 tiles line up</h2>
+          <p>
+            This goes beyond B, but it uses the same code. JS decides <strong>how many</strong> tiles there are and
+            <strong>in what order</strong>; CSS Grid decides <strong>how they are laid out</strong>.
+          </p>
+          <p><strong>How many, and in what order (JS)</strong></p>
+          <ul>
+            <li>
+              <code>renderSpecimen</code> loops over <code>Object.keys(GLYPHS)</code>. <code>GLYPHS</code> defines 26
+              letters, A to Z, so the loop runs 26 times and creates 26 <code>button.tile</code> elements.
+            </li>
+            <li>
+              <code>Object.keys</code> returns the keys in the order they were defined, and <code>append</code> always
+              adds to the end, so the order in the DOM is A, B, C … Z.
+            </li>
+          </ul>
+          <p><strong>Lining them up (CSS Grid)</strong></p>
+          <ul>
+            <li>
+              <code>display: grid</code> turns the 26 tiles into grid items. The browser fills them in DOM order, left
+              to right and row by row, so no tile needs a position of its own.
+            </li>
+            <li>
+              <code>repeat(auto-fill, minmax(9rem, 1fr))</code> picks the number of columns. Each column is at least
+              9rem wide, <code>auto-fill</code> fits in as many columns as possible, and <code>1fr</code> shares the
+              leftover space equally, so all columns are the same width.
+            </li>
+            <li>
+              <code>max-width: 72rem</code> (1152px) caps the width. Because the page sets
+              <code>box-sizing: border-box</code>, that width <em>includes</em> the 1px left border, leaving 1151px
+              for columns. Eight 9rem columns would need 1152px, so only 7 fit, and each grows to about 164px. A wide
+              screen therefore shows 7 per row: 26 = 7 + 7 + 7 + 5, four rows. A narrower window gets fewer columns,
+              about 2 on a phone.
+            </li>
+            <li>
+              <code>aspect-ratio: 9 / 12</code>: the column sets the width and the height follows, so every tile is
+              the same size and every row lines up.
+            </li>
+            <li>
+              <strong>Borders</strong>: the grid draws only its top and left edges, and each tile only its right and
+              bottom. Together they make 1px graph paper. If every tile drew all four sides, shared edges would be 2px.
+            </li>
+          </ul>
+          <p>
+            <strong>In short:</strong> JS decides how many and in what order; CSS Grid decides how many per row, how
+            big, and how they align. When the window is resized, only CSS lays the tiles out again. The JS doesn't
+            run again.
+          </p>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>p3_css_typeface.js · lines 302–312</figcaption>
+<pre data-lang="js" data-hl="2,3,9">function renderSpecimen(container) {
+  for (const letter of Object.keys(GLYPHS)) {
+    const tile = createLetter(letter, 9, "tile");
+    const label = document.createElement("span");
+    label.className = "tile-label";
+    label.setAttribute("aria-hidden", "true");
+    label.textContent = letter + letter.toLowerCase();
+    tile.prepend(label);
+    container.append(tile);
+  }
+}</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>p3_css_typeface.css · lines 100–108</figcaption>
+<pre data-lang="css" data-hl="3,4,5,7,8">/* Specimen grid: each tile draws its right and bottom rule. */
+.specimen {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  max-width: 72rem;
+  margin: 0 auto;
+  border-top: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+}</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>p3_css_typeface.css · lines 122–129</figcaption>
+<pre data-lang="css" data-hl="4,5,6">/* Each tile is 9 x 12 grid units. */
+.tile {
+  --cols: 9;
+  aspect-ratio: 9 / 12;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result: the same grid rules at a third of the size (3rem columns, 24rem max), so it fits this panel</p>
+              <div data-demo="layout"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Why JavaScript ===== -->
+      <section class="step" id="why-js">
+        <header class="step-head">
+          <p class="step-no">Extra</p>
+          <h2>Why JavaScript? Could CSS alone do the same?</h2>
+          <p>
+            Yes. Everything you see move is already CSS: switching variable sets on hover, the transition, and
+            scaling with em. In this project JS works more like a <strong>generator</strong>: it turns short shape
+            data into the many numbers CSS needs, and builds the matching HTML.
+          </p>
+          <p>What JS does, and how you would do it without JS:</p>
+          <div class="table-wrap">
+            <table class="compare">
+              <thead>
+                <tr>
+                  <th>What JS does</th>
+                  <th>CSS / HTML-only alternative</th>
+                  <th>Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Builds every element for the 26 tiles and the "maple" heading</td>
+                  <td>Write the HTML by hand</td>
+                  <td>About 120 <code>.part</code> spans</td>
+                </tr>
+                <tr>
+                  <td>Turns data like <code>R(3, 0, 1, 8)</code> into 14 CSS variables</td>
+                  <td>Write each part's variables by hand, e.g. <code>style="--lx: 2; --ly: 1; …"</code></td>
+                  <td>About 120 × 14 ≈ 1,700 values</td>
+                </tr>
+                <tr>
+                  <td>Centring: <code>extentOf</code> measures each letter, then the shift is computed</td>
+                  <td>Work it out for each letter and bake it into x</td>
+                  <td>Change one part and every x in that letter has to be recalculated</td>
+                </tr>
+                <tr>
+                  <td>Diagonals <code>S()</code>: <code>hypot</code> and <code>atan2</code> give the length and angle</td>
+                  <td>Precompute with a calculator, or use CSS's newer <code>hypot()</code> and <code>atan2()</code></td>
+                  <td>Error-prone by hand; the CSS functions need recent browsers</td>
+                </tr>
+                <tr>
+                  <td>Per-letter widths for "maple" (<code>--lbox</code>, <code>--ubox</code>)</td>
+                  <td>Work out each width by hand</td>
+                  <td>Same as above</td>
+                </tr>
+                <tr>
+                  <td>Toggle button: adds <code>.is-upper</code> and updates <code>aria-pressed</code></td>
+                  <td>A checkbox plus the <code>:has()</code> selector (shown below)</td>
+                  <td>Works; the control becomes a checkbox instead of a button, so screen readers announce it differently</td>
+                </tr>
+                <tr>
+                  <td><code>is-ready</code>: turns transitions on after the first paint</td>
+                  <td>Leave it out</td>
+                  <td>Newly inserted elements don't transition anyway, so this is mostly a safeguard</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            <strong>In short:</strong> the end result can be identical with only CSS and static HTML. JS is there
+            because it makes the typeface easy to write and change. Each part is one line of data, and the
+            centring, angles and radius values are computed automatically, so changing a shape updates everything
+            derived from it.
+          </p>
+          <p>
+            <strong>A middle ground:</strong> a CSS preprocessor such as Sass can generate the same CSS with maps and
+            loops. It does the same job as the JS, just at build time, before the page is published, instead of in
+            the visitor's browser.
+          </p>
+          <p>
+            Below is a B written entirely by hand. It needs 3 parts × 14 values = 42 numbers, all taken from the
+            table in step 6.
+          </p>
+        </header>
+        <div class="step-body">
+          <div class="code-col">
+            <figure class="code">
+              <figcaption>Hand-written HTML for B, no JS (rendered on the right)</figcaption>
+<pre data-lang="html" data-hl="12,14">&lt;button class="letter tile" type="button" aria-label="Letter B"&gt;
+  &lt;span class="tile-label" aria-hidden="true"&gt;Bb&lt;/span&gt;
+  &lt;span class="glyph" aria-hidden="true"&gt;
+    &lt;!-- stem: the same in both cases --&gt;
+    &lt;span class="part" style="
+      --lx: 2; --ly: 1; --lw: 1; --lh: 8; --lrot: 0deg;
+      --lradius: 0.5em; --lopacity: 1;
+      --ux: 2; --uy: 1; --uw: 1; --uh: 8; --urot: 0deg;
+      --uradius: 0.5em; --uopacity: 1"&gt;&lt;/span&gt;
+    &lt;!-- upper bowl: only y changes (5 → 1) --&gt;
+    &lt;span class="part" style="
+      --lx: 3; --ly: 5; --lw: 4; --lh: 4; --lrot: 0deg;
+      --lradius: 2em; --lopacity: 1;
+      --ux: 3; --uy: 1; --uw: 4; --uh: 4; --urot: 0deg;
+      --uradius: 2em; --uopacity: 1"&gt;&lt;/span&gt;
+    &lt;!-- lower bowl: the same in both cases --&gt;
+    &lt;span class="part" style="
+      --lx: 3; --ly: 5; --lw: 4; --lh: 4; --lrot: 0deg;
+      --lradius: 2em; --lopacity: 1;
+      --ux: 3; --uy: 5; --uw: 4; --uh: 4; --urot: 0deg;
+      --uradius: 2em; --uopacity: 1"&gt;&lt;/span&gt;
+  &lt;/span&gt;
+&lt;/button&gt;</pre>
+            </figure>
+            <figure class="code">
+              <figcaption>p3_typeface_explainer.css · CSS-only toggle</figcaption>
+<pre data-lang="css" data-hl="2">/* No JS: the checkbox state switches the variables */
+.css-only:has(.case-check:checked) .part {
+  left: calc(var(--ux) * 1em);
+  top: calc(var(--uy) * 1em);
+  width: calc(var(--uw) * 1em);
+  height: calc(var(--uh) * 1em);
+  border-radius: var(--uradius);
+  transform: rotate(var(--urot));
+  opacity: var(--uopacity);
+}
+
+/* Transitions are on from the start; no is-ready class needed. */
+.css-only .part {
+  transition-property: left, top, width, height, border-radius, transform, opacity;
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}</pre>
+            </figure>
+          </div>
+          <div class="demo-col">
+            <div class="demo">
+              <p class="demo-label">Result: the hand-written B. No JS builds it or changes it</p>
+              <div class="css-only final">
+                <label class="check">
+                  <input type="checkbox" class="case-check" />
+                  <span>Show uppercase</span>
+                </label>
+                <div class="specimen">
+                  <button class="letter tile" type="button" aria-label="Letter B">
+                    <span class="tile-label" aria-hidden="true">Bb</span>
+                    <span class="glyph" aria-hidden="true">
+                      <!-- stem: the same in both cases -->
+                      <span class="part" style="
+                        --lx: 2; --ly: 1; --lw: 1; --lh: 8; --lrot: 0deg;
+                        --lradius: 0.5em; --lopacity: 1;
+                        --ux: 2; --uy: 1; --uw: 1; --uh: 8; --urot: 0deg;
+                        --uradius: 0.5em; --uopacity: 1"></span>
+                      <!-- upper bowl: only y changes (5 → 1) -->
+                      <span class="part" style="
+                        --lx: 3; --ly: 5; --lw: 4; --lh: 4; --lrot: 0deg;
+                        --lradius: 2em; --lopacity: 1;
+                        --ux: 3; --uy: 1; --uw: 4; --uh: 4; --urot: 0deg;
+                        --uradius: 2em; --uopacity: 1"></span>
+                      <!-- lower bowl: the same in both cases -->
+                      <span class="part" style="
+                        --lx: 3; --ly: 5; --lw: 4; --lh: 4; --lrot: 0deg;
+                        --lradius: 2em; --lopacity: 1;
+                        --ux: 3; --uy: 5; --uw: 4; --uh: 4; --urot: 0deg;
+                        --uradius: 2em; --uopacity: 1"></span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+              <p class="demo-note">Hover the letter or tick the box. It behaves exactly like the generated one.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script src="p3_typeface_explainer.js"></script>
+  </body>
+</html>

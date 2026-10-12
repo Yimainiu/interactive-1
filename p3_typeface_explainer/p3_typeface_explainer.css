@@ -1,0 +1,1010 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --paper: #fff;
+  --panel: #fafafa;
+  --ink: #000;
+  --muted: #6b6b6b;
+  --rule: #e2e2e2;
+  --grid: #ececec;
+  --soft: #f2f2f2;
+  --accent: #1469ff;
+
+  /* the three parts of B, used when parts are drawn in colour */
+  --part-1: #2f6fdf;
+  --part-2: #f0803c;
+  --part-3: #2e9e5b;
+
+  --code-bg: #111;
+  --code-ink: #ececec;
+  --code-dim: #8a8a8a;
+
+  --sans: system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  line-height: 1.7;
+}
+
+#home {
+  display: block;
+  padding-top: 0.5rem;
+  text-align: center;
+}
+
+.page {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 0 1rem 5rem;
+}
+
+h1 {
+  margin: 0;
+  padding: 2.5rem 0 1rem;
+  font-size: clamp(1.9rem, 5vw, 2.75rem);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.step-no {
+  margin: 0;
+  color: var(--muted);
+  font: 600 0.8rem var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.step-head p {
+  margin: 0 0 0.75rem;
+}
+
+.step-head code {
+  padding: 0.05em 0.35em;
+  border-radius: 4px;
+  background: var(--soft);
+  font-family: var(--mono);
+  font-size: 0.88em;
+}
+
+/* ---- flow chart ---- */
+
+.flow {
+  padding: 1rem 0 3rem;
+}
+
+.flow h2 {
+  margin: 0 0 1.25rem;
+}
+
+.flow code {
+  padding: 0 0.25em;
+  border-radius: 3px;
+  background: var(--soft);
+  font-family: var(--mono);
+  font-size: 0.88em;
+}
+
+.flow-phases {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.phase {
+  position: relative;
+  padding: 1rem 1rem 1.1rem;
+  border: 1px solid var(--ink);
+  border-radius: 10px;
+  background: var(--paper);
+}
+
+/* arrow to the next phase */
+.phase:not(:last-child)::after {
+  content: "→";
+  position: absolute;
+  top: 0.85rem;
+  right: -1.85rem;
+  color: var(--muted);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.phase-head {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.phase-no {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+  font: 600 0.8rem var(--mono);
+}
+
+.phase h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.phase-note {
+  margin: -0.35rem 0 0.85rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* steps inside a phase: a line with a dot per step */
+.flow-steps {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0 0 0 1rem;
+  border-left: 2px solid var(--rule);
+  list-style: none;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.flow-steps > li {
+  position: relative;
+}
+
+.flow-steps > li::before {
+  content: "";
+  position: absolute;
+  top: 0.3em;
+  left: calc(-1rem - 7px);
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+.flow-steps > li.is-key {
+  font-weight: 600;
+}
+
+.flow-steps > li.is-key::before {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.flow-sub {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.4rem 0 0;
+  padding-left: 0.75rem;
+  list-style: none;
+}
+
+.flow-sub li::before {
+  content: "– ";
+  color: var(--muted);
+}
+
+.flow-link {
+  display: inline-block;
+  margin-left: 0.2rem;
+  padding: 0 0.35rem;
+  border-radius: 4px;
+  background: var(--soft);
+  color: var(--muted);
+  font: 500 0.7rem/1.6 var(--mono);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.flow-link:hover,
+.flow-link:focus-visible {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+@media (max-width: 1000px) {
+  .flow-phases {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.25rem;
+  }
+
+  .phase:not(:last-child)::after {
+    content: "↓";
+    top: auto;
+    right: auto;
+    bottom: -1.85rem;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+/* ---- steps ---- */
+
+.step {
+  padding: 3rem 0;
+  scroll-margin-top: 0.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+.step-head {
+  max-width: 46rem;
+  margin-bottom: 1.5rem;
+}
+
+h2 {
+  margin: 0.2rem 0 0.75rem;
+  font-size: 1.4rem;
+  line-height: 1.35;
+}
+
+.step-head ul {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.step-head li {
+  margin-bottom: 0.4rem;
+}
+
+/* code on the left, result on the right */
+.step-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.code-col {
+  display: grid;
+  gap: 1rem;
+}
+
+.demo-col {
+  position: sticky;
+  top: 1rem;
+}
+
+@media (max-width: 860px) {
+  .step-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .demo-col {
+    position: static;
+  }
+}
+
+/* ---- code boxes ---- */
+
+.code {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--code-bg);
+}
+
+.code figcaption {
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+  color: var(--code-dim);
+  font: 0.75rem var(--mono);
+}
+
+.code pre {
+  margin: 0;
+  padding: 0.75rem 0;
+  overflow-x: auto;
+  color: var(--code-ink);
+  font: 0.8rem/1.65 var(--mono);
+  tab-size: 2;
+}
+
+/* as wide as the longest line, so a marked line's band spans the scroll width */
+.code pre code {
+  display: inline-block;
+  min-width: 100%;
+  font: inherit;
+}
+
+.code .line {
+  display: block;
+  padding: 0 1rem 0 calc(1rem - 3px);
+  border-left: 3px solid transparent;
+}
+
+.code .line.is-marked {
+  border-left-color: #fff;
+  background: rgb(255 255 255 / 0.1);
+}
+
+.tok-comment {
+  color: var(--code-dim);
+  font-style: italic;
+}
+
+.tok-string {
+  color: #f2b880;
+}
+
+.tok-keyword,
+.tok-tag {
+  color: #9cc7e0;
+}
+
+.tok-number {
+  color: #e9c97a;
+}
+
+.tok-property,
+.tok-attr {
+  color: #9fd3b6;
+}
+
+/* ---- demo panel ---- */
+
+.demo {
+  padding: 1.25rem;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.demo-label {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.demo-note {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.readout {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: var(--soft);
+  font: 0.78rem/1.75 var(--mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+}
+
+.btn,
+.segmented button {
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.btn[aria-pressed="true"],
+.segmented button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.segmented {
+  display: inline-flex;
+}
+
+.segmented button:first-child {
+  border-radius: 999px 0 0 999px;
+}
+
+.segmented button:last-child {
+  margin-left: -1px;
+  border-radius: 0 999px 999px 0;
+}
+
+.slider {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.slider input {
+  width: 9rem;
+  accent-color: var(--ink);
+}
+
+.slider output {
+  min-width: 4.5em;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  cursor: pointer;
+}
+
+.check input {
+  accent-color: var(--ink);
+}
+
+/* ======== Copied from ../p3_css_typeface/p3_css_typeface.css ========
+   Only the rules a single B tile needs. `.is-upper` is generalised from
+   `.specimen.is-upper` so the demos can force the uppercase state. */
+
+.specimen {
+  display: grid;
+  width: min(100%, 15rem);
+  max-width: 100%;
+  margin: 0 auto;
+  border-top: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+}
+
+.letter {
+  position: relative;
+  container-type: inline-size;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.tile {
+  --cols: 9;
+  aspect-ratio: 9 / 12;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.tile:focus-visible {
+  z-index: 1;
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.tile-label {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.6rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.glyph {
+  position: absolute;
+  inset: 0;
+  font-size: calc(100cqw / var(--cols));
+}
+
+.part {
+  position: absolute;
+  display: block;
+  left: calc(var(--lx) * 1em);
+  top: calc(var(--ly) * 1em);
+  width: calc(var(--lw) * 1em);
+  height: calc(var(--lh) * 1em);
+  border-radius: var(--lradius);
+  transform: rotate(var(--lrot));
+  opacity: var(--lopacity);
+  background: var(--ink);
+  box-shadow: 0 0 0 0.5px var(--ink);
+}
+
+.is-ready .part {
+  transition-property: left, top, width, height, border-radius, transform, opacity;
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.tile:hover .part,
+.tile:focus-visible .part,
+.is-upper .part {
+  left: calc(var(--ux) * 1em);
+  top: calc(var(--uy) * 1em);
+  width: calc(var(--uw) * 1em);
+  height: calc(var(--uh) * 1em);
+  border-radius: var(--uradius);
+  transform: rotate(var(--urot));
+  opacity: var(--uopacity);
+}
+
+.case-toggle {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.case-toggle[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* ======== Explainer-only additions ======== */
+
+/* A static tile for diagrams: same 9 x 12 box, no hover. */
+.frame {
+  --cols: 9;
+  aspect-ratio: 9 / 12;
+  width: 100%;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  cursor: default;
+}
+
+.frame-wrap {
+  width: min(100%, 16rem);
+  margin: 0 auto;
+}
+
+/* room on the right for the guide-line labels */
+.frame-wrap.has-guides {
+  width: min(100%, 23rem);
+  padding-right: 7rem;
+}
+
+/* Grid overlay, one cell per grid unit. --u is one unit in the frame. */
+.grid {
+  --u: calc(100cqw / 9);
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: var(--u) var(--u);
+}
+
+.grid-number {
+  position: absolute;
+  left: calc(var(--col) * var(--u));
+  top: calc(var(--row) * var(--u));
+  display: grid;
+  place-items: center;
+  width: var(--u);
+  height: var(--u);
+  color: var(--muted);
+  font: 10px/1 var(--mono);
+}
+
+.guide {
+  position: absolute;
+  left: 0;
+  right: -7rem;
+  top: calc(var(--row) * var(--u));
+  border-top: 1px dashed var(--accent);
+}
+
+.guide::after {
+  content: attr(data-label);
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  padding: 0 0.25rem;
+  background: var(--panel);
+  color: var(--accent);
+  font: 11px/1.4 var(--mono);
+  white-space: nowrap;
+}
+
+/* Shape playground (step 2): one shape, plus what goes in and what comes out. */
+.playground {
+  overflow: hidden;
+}
+
+.marks {
+  --u: calc(100cqw / 9);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mark-box,
+.mark-dot {
+  position: absolute;
+  left: calc(var(--x) * var(--u));
+  top: calc(var(--y) * var(--u));
+  transition-property: left, top, width, height;
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.mark-box {
+  width: calc(var(--w) * var(--u));
+  height: calc(var(--h) * var(--u));
+  outline: 2px dashed var(--accent);
+  outline-offset: -1px;
+}
+
+.mark-dot {
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+.mark-centre {
+  border-color: var(--paper);
+  background: var(--accent);
+}
+
+/* Centring diagram: the tile's centre line and the glyph's extent. */
+.centre-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(4.5 * var(--u));
+  border-left: 2px dashed var(--muted);
+}
+
+.extent {
+  position: absolute;
+  top: calc(10.3 * var(--u));
+  left: calc(var(--from) * var(--u));
+  width: calc(var(--size) * var(--u));
+  height: calc(0.45 * var(--u));
+  border: 2px solid var(--accent);
+  border-top: 0;
+  transition: left 500ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.extent::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 1px);
+  bottom: 0;
+  height: calc(1.1 * var(--u));
+  border-left: 2px solid var(--accent);
+}
+
+.key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  justify-content: center;
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.key-centre {
+  color: var(--ink);
+}
+
+.key-extent {
+  color: var(--accent);
+}
+
+/* Parts drawn in colour; overlaps show as a darker blend. */
+.coloured .glyph {
+  isolation: isolate;
+}
+
+.coloured .part {
+  mix-blend-mode: multiply;
+}
+
+.coloured .part:nth-child(1) {
+  background: var(--part-1);
+  box-shadow: none;
+}
+
+.coloured .part:nth-child(2) {
+  background: var(--part-2);
+  box-shadow: none;
+}
+
+.coloured .part:nth-child(3) {
+  background: var(--part-3);
+  box-shadow: none;
+}
+
+.legend {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.legend-item {
+  display: grid;
+  grid-template-columns: 0.85rem minmax(0, 1fr);
+  gap: 0 0.6rem;
+  align-items: baseline;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+}
+
+.swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 3px;
+  background: var(--swatch);
+  transform: translateY(0.1em);
+}
+
+.legend-item code {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  margin-left: 0.4rem;
+  padding: 0 0.4rem;
+  border-radius: 4px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.badge.is-diff {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.pair figure {
+  margin: 0;
+}
+
+.pair figcaption {
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* DOM listing in step 4 */
+.dom-listing {
+  margin: 1rem 0 0;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--code-bg);
+}
+
+.dom-listing pre {
+  margin: 0;
+  padding: 0.75rem 0;
+  overflow-x: auto;
+  color: var(--code-ink);
+  font: 0.72rem/1.6 var(--mono);
+}
+
+.dom-listing pre code {
+  display: inline-block;
+  min-width: 100%;
+  font: inherit;
+}
+
+.dom-listing .line {
+  display: block;
+  padding: 0 0.9rem 0 2.4rem;
+  text-indent: -1.5rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* DOM before / after in step 4 */
+.listing-title {
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+  color: var(--code-dim);
+  font: 0.75rem var(--mono);
+}
+
+.dom-listing .line.is-marked {
+  box-shadow: inset 3px 0 var(--accent);
+  background: rgb(20 105 255 / 0.28);
+  color: #fff;
+}
+
+.demo-sub {
+  margin: 1.5rem 0 0.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* an empty #specimen draws nothing, so say so */
+.dom-screen .specimen:empty {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 9 / 12;
+  border: 1px dashed var(--rule);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.dom-screen .specimen:empty::before {
+  content: "#specimen is empty: nothing to draw";
+  padding: 1rem;
+  text-align: center;
+}
+
+/* 26-tile grid demo: P3's grid rules at a third of the size */
+.layout-grid {
+  grid-template-columns: repeat(auto-fill, minmax(3rem, 1fr));
+  width: 24rem;
+  max-width: 100%;
+}
+
+.layout-grid .tile-label {
+  top: 0.2rem;
+  left: 0.25rem;
+  font-size: 0.55rem;
+}
+
+.placeholder {
+  cursor: default;
+}
+
+.placeholder::after {
+  content: attr(data-letter);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--rule);
+  font: 600 50cqw/1 var(--sans);
+}
+
+/* variable table in step 6 */
+.table-wrap {
+  overflow-x: auto;
+}
+
+.vars {
+  width: 100%;
+  border-collapse: collapse;
+  font: 0.78rem var(--mono);
+}
+
+.vars th,
+.vars td {
+  padding: 0.35rem 0.45rem;
+  border-bottom: 1px solid var(--rule);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.vars th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.vars th:first-child,
+.vars td.name,
+.vars td.state {
+  text-align: left;
+}
+
+.vars td.name {
+  font-family: var(--sans);
+  vertical-align: top;
+}
+
+.vars td.name .swatch {
+  display: inline-block;
+  margin-right: 0.4rem;
+}
+
+.vars td.state {
+  color: var(--muted);
+}
+
+.vars td.is-diff {
+  background: rgb(20 105 255 / 0.12);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* step 8: adjustable transition speed */
+.speed .part {
+  transition-duration: var(--speed, 500ms);
+}
+
+.final {
+  display: grid;
+  gap: 1.25rem;
+  justify-items: center;
+}
+
+/* "Why JavaScript?" section */
+.compare {
+  width: 100%;
+  margin: 0 0 1rem;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.compare th,
+.compare td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+.compare th {
+  border-bottom-color: var(--ink);
+  font-weight: 600;
+}
+
+.compare td:last-child {
+  color: var(--muted);
+}
+
+/* No JS: the checkbox state switches the variables */
+.css-only:has(.case-check:checked) .part {
+  left: calc(var(--ux) * 1em);
+  top: calc(var(--uy) * 1em);
+  width: calc(var(--uw) * 1em);
+  height: calc(var(--uh) * 1em);
+  border-radius: var(--uradius);
+  transform: rotate(var(--urot));
+  opacity: var(--uopacity);
+}
+
+/* Transitions are on from the start; no is-ready class needed. */
+.css-only .part {
+  transition-property: left, top, width, height, border-radius, transform, opacity;
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-ready .part,
+  .css-only .part,
+  .extent,
+  .mark-box,
+  .mark-dot {
+    transition: none;
+  }
+}

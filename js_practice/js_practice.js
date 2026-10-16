@@ -9,8 +9,14 @@ function pickUp() {
 }
 
 function enter() {
-  attempts++;
-  text.innerText = pass ? "Door opened!" : `No pass. Attempts: ${attempts}`;
+  attempts = attempts + 1;
+  if (pass == true) {
+    text.innerText = "Door opened!";
+  }
+
+  if (pass == false) {
+    text.innerText = "No pass.";
+  }
 }
 
 function restart() {

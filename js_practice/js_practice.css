@@ -1,0 +1,22 @@
+body {
+  background-color: aliceblue;
+  font-size: 30px;
+}
+
+pre {
+  margin: 0 0;
+}
+
+button {
+  display: block;
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: inherit;
+  padding-left: 0;
+}
+
+button:hover {
+  background: orange;
+  cursor: pointer;
+}

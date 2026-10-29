@@ -1,0 +1,182 @@
+/* same palette as the home page */
+:root {
+  --paper: #f6eee9;
+  --coral: #e08a6a;
+  --ink: #24120c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+/* ---------- text + buttons on top of the 3D scene ---------- */
+
+#info,
+#controls {
+  position: fixed;
+  left: 16px;
+  max-width: 20rem;
+  padding: 1rem;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+}
+
+#info {
+  top: 16px;
+}
+
+#controls {
+  bottom: 16px;
+}
+
+#home {
+  color: inherit;
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+#home::before {
+  content: "← ";
+}
+
+#home:hover,
+#home:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+h1 {
+  margin: 0.6rem 0 0.4rem;
+  font-size: 1.6rem;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+#info p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+#views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+}
+
+button {
+  padding: 0.4rem 0.7rem;
+  background: none;
+  border: 1px solid var(--ink);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+button:hover,
+button:focus-visible {
+  background: var(--coral);
+}
+
+button.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+label {
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+label input {
+  accent-color: var(--ink);
+}
+
+#hint {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* ---------- photo frame ---------- */
+
+#frame {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  border: 1px solid var(--ink);
+  /* dims everything outside the photo's 4:3 crop */
+  box-shadow: 0 0 0 100vmax rgb(246 238 233 / 0.55);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+#frame[hidden] {
+  display: none;
+}
+
+#frame-label {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  padding: 0.3rem 0.5rem;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* phones: keep the panels small so the model stays visible */
+@media (max-width: 600px) {
+  #info,
+  #controls {
+    right: 16px;
+    max-width: none;
+    padding: 0.75rem;
+  }
+
+  #info p,
+  #hint {
+    display: none;
+  }
+
+  h1 {
+    margin: 0.4rem 0 0;
+    font-size: 1.25rem;
+  }
+}

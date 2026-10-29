@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>[Tong] 3D Reconstruction Test</title>
+    <link rel="stylesheet" href="3d_reconstruction_test.css" />
+    <!-- three.js comes from a CDN, so there is nothing to install -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <!-- 4:3 frame that shows up when the camera sits where a photo was taken -->
+    <div id="frame" hidden><span id="frame-label"></span></div>
+
+    <header id="info">
+      <a id="home" href="../index.html">Home</a>
+      <h1>3D Reconstruction Test</h1>
+      <p>
+        A low-poly guess at our Industrial Design studio, rebuilt with
+        three.js from two phone photos.
+      </p>
+    </header>
+
+    <nav id="controls">
+      <h3>View</h3>
+      <div id="views">
+        <button data-view="photo1">Photo 1</button>
+        <button data-view="photo2">Photo 2</button>
+        <button data-view="overview">Overview</button>
+        <button data-view="plan">Plan</button>
+      </div>
+      <label><input type="checkbox" id="wireframe" /> Wireframe</label>
+    </nav>
+
+    <p id="hint">Drag to orbit · scroll to zoom · right-drag to pan</p>
+
+    <script type="module" src="3d_reconstruction_test.js"></script>
+  </body>
+</html>

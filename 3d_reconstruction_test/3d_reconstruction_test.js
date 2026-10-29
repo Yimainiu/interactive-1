@@ -304,7 +304,7 @@ function buildPartition() {
 
   // white wall + folding chair beside the partition on the left
   box(scene, from - ROOM.left - 0.1, 3.2, 0.2, C.wall, (ROOM.left + from) / 2, 0, z + 0.3);
-  foldingChair(scene, -6.3, z + 0.9, 10);
+  foldingChair(scene, -6.3, z + 0.9, 0);
 }
 
 // exposed steel and the cable grid under the ceiling
@@ -560,6 +560,9 @@ function robotArm(parent, x, y, z) {
 
 /* ==================================================================
    LAYOUT  (rough positions, read off the two photos)
+   The photos were taken at an angle, but the benches, dividers and
+   boxes all sit square to the walls. Only the rolling pin-board is
+   turned, because it really is standing at an angle.
 ================================================================== */
 
 function buildStudio() {
@@ -567,78 +570,78 @@ function buildStudio() {
   pinBoard(scene, 0.2, -2.9, -60);
 
   // --- whiteboard just behind it ---
-  whiteboard(scene, 0.35, -4.3, 18);
+  whiteboard(scene, 0.1, -4.3, 0);
 
   // --- front pod of benches with cardboard dividers ---
-  const t1 = workbench(scene, -0.55, -5.25, 32, 1.15, 0.8);
+  const t1 = workbench(scene, -0.42, -5.28, 0, 1.1, 0.76);
   // papers, rulers, sticky notes
   box(t1, 0.42, 0.01, 0.3, C.white, 0.05, t1.userData.top, 0.05);
   box(t1, 0.3, 0.012, 0.22, "#eef0f6", 0.25, t1.userData.top, 0.1);
   box(t1, 0.28, 0.02, 0.04, C.lime, 0.0, t1.userData.top + 0.01, -0.05);
   box(t1, 0.24, 0.02, 0.04, C.lime, 0.3, t1.userData.top + 0.01, -0.12);
   box(t1, 0.14, 0.02, 0.05, "#3f6fd1", 0.08, t1.userData.top + 0.01, 0.18);
-  cardboard(t1, 0.85, 1.4, -0.6, 0, 90);
+  cardboard(t1, 0.85, 1.4, -0.57, 0, 90);
 
-  const t2 = workbench(scene, -1.5, -5.8, 32, 1.1, 0.8);
+  const t2 = workbench(scene, -1.55, -6.5, 0, 1.0, 0.76);
   // toolbox, black bag, clear bin, poster
   box(t2, 0.34, 0.22, 0.22, C.black, -0.15, t2.userData.top, 0);
   box(t2, 0.34, 0.06, 0.22, C.yellow, -0.15, t2.userData.top + 0.16, 0);
   box(t2, 0.4, 0.26, 0.26, C.black, 0.25, t2.userData.top, -0.12);
-  box(t2, 0.34, 0.26, 0.24, "#dfe8ec", 0.3, t2.userData.top, 0.18);
-  cardboard(t2, 0.85, 1.35, -0.57, 0, 90);
+  box(t2, 0.34, 0.26, 0.24, "#dfe8ec", 0.25, t2.userData.top, 0.18);
+  cardboard(t2, 0.85, 1.35, -0.52, 0, 90);
   cardboard(t2, 0.36, 0.45, 0.05, 0.33, 0, t2.userData.top);
 
-  const t3 = workbench(scene, -0.45, -6.45, 32, 1.4, 0.8);
+  const t3 = workbench(scene, -0.3, -6.5, 0, 1.3, 0.76);
   // instrument case and grey bag
   box(t3, 0.85, 0.12, 0.28, C.black, 0.15, t3.userData.top, -0.05);
-  box(t3, 0.45, 0.2, 0.3, "#a8a6a8", -0.35, t3.userData.top, 0.22);
-  cardboard(t3, 0.8, 0.9, 0.72, -0.05, 90, 0.2);
+  box(t3, 0.45, 0.2, 0.3, "#a8a6a8", -0.35, t3.userData.top, 0.2);
+  cardboard(t3, 0.8, 0.9, 0.67, 0, 90, 0.2);
 
-  stool(scene, -0.15, -5.85);
-  stool(scene, -1.1, -6.4);
+  stool(scene, -0.15, -5.9);
+  stool(scene, -1.3, -5.95);
 
   // round fibre drum
-  cyl(scene, 0.29, 0.29, 0.95, 10, "#cfa772", -2.55, 0, -7.9);
-  cyl(scene, 0.3, 0.3, 0.04, 10, C.steel, -2.55, 0.92, -7.9);
+  cyl(scene, 0.29, 0.29, 0.95, 10, "#cfa772", -2.6, 0, -8.0);
+  cyl(scene, 0.3, 0.3, 0.04, 10, C.steel, -2.6, 0.92, -8.0);
 
   // --- back pod: 3D printer table, divider, person's desk ---
-  const t4 = workbench(scene, -0.1, -9.2, 4, 1.8, 0.8);
-  printer3d(t4, 0.1, t4.userData.top, -0.05, -10);
-  box(t4, 0.35, 0.16, 0.22, "#7f8487", -0.35, t4.userData.top, 0.05);
-  box(t4, 0.2, 0.2, 0.2, C.red, -0.7, t4.userData.top, -0.1);
-  box(t4, 0.3, 0.4, 0.02, C.white, -0.85, t4.userData.top, 0.1);
-  const t5 = workbench(scene, 1.6, -8.4, -6, 1.6, 0.8);
+  const t4 = workbench(scene, 0.2, -8.7, 0, 1.8, 0.8);
+  printer3d(t4, 0.3, t4.userData.top, -0.05, 0);
+  box(t4, 0.35, 0.16, 0.22, "#7f8487", -0.2, t4.userData.top, 0.05);
+  box(t4, 0.2, 0.2, 0.2, C.red, -0.55, t4.userData.top, -0.1);
+  box(t4, 0.3, 0.4, 0.02, C.white, -0.75, t4.userData.top, 0.1);
+  const t5 = workbench(scene, 1.75, -8.2, 0, 1.4, 0.76);
   box(t5, 0.4, 0.06, 0.25, "#c79b6e", 0.1, t5.userData.top, 0);
   box(t5, 0.3, 0.12, 0.2, C.white, -0.4, t5.userData.top, 0.1);
-  cardboard(scene, 0.8, 0.75, 1.0, -7.75, -6, 0.92);
-  stool(scene, 1.2, -7.6);
+  cardboard(t5, 0.8, 0.75, -0.3, 0.35, 0, t5.userData.top);
+  stool(scene, 1.4, -7.4);
 
-  cardboard(scene, 2.4, 1.55, 2.7, -9.75, -8);
+  cardboard(scene, 2.4, 1.55, 2.6, -9.7, 0);
   const desk = workbench(scene, 3.55, -10.4, 90, 1.8, 0.75);
   monitor(desk, 0.0, desk.userData.top, -0.05, 90, "#d9dadc");
   sittingPerson(scene, 4.25, -10.2, -90);
 
   // --- right side: big cardboard boxes and a prototyping table ---
-  const big = place(scene, 2.9, -4.9, 12);
+  const big = place(scene, 2.9, -4.9, 0);
   box(big, 1.7, 1.3, 1.1, C.cardboard, 0, 0, 0);
   const flap = box(big, 1.6, 0.02, 0.65, "#b98f5c", 0.05, 1.3, 0.1);
   flap.rotation.x = -0.35;
 
-  const t6 = workbench(scene, 4.3, -6.6, 6, 1.6, 0.8);
+  const t6 = workbench(scene, 4.3, -6.6, 0, 1.6, 0.8);
   robotArm(t6, -0.2, t6.userData.top, 0);
   box(t6, 0.6, 0.45, 0.4, C.cardboard, 0.45, t6.userData.top, 0);
   monitor(t6, 0.4, t6.userData.top, -0.35, 0);
   cyl(t6, 0.05, 0.05, 0.25, 6, C.yellow, -0.6, t6.userData.top, -0.2);
   addMesh(t6, new THREE.IcosahedronGeometry(0.12, 0), mat(C.yellow), -0.6, t6.userData.top + 0.3, -0.2);
-  cardboard(scene, 2.2, 1.3, 5.6, -5.7, 6);
+  cardboard(scene, 2.2, 1.3, 5.6, -5.7, 0);
 
-  const t7 = workbench(scene, 1.9, -3.55, 18, 1.2, 0.75);
+  const t7 = workbench(scene, 1.9, -3.55, 0, 1.2, 0.75);
   box(t7, 0.5, 0.3, 0.4, C.white, -0.15, t7.userData.top, 0);
   cyl(t7, 0.13, 0.13, 0.03, 10, C.yellow, 0.3, t7.userData.top, 0.1);
   cyl(t7, 0.04, 0.04, 0.24, 8, "#c0c3c6", 0.0, t7.userData.top, -0.25);
 
   // black school chair right behind the pin-board
-  const chair = place(scene, 1.55, -2.35, -40);
+  const chair = place(scene, 1.55, -2.35, 0);
   cyl(chair, 0.22, 0.22, 0.05, 8, C.black, 0, 0.45, 0);
   box(chair, 0.4, 0.3, 0.04, C.black, 0, 0.55, -0.2);
   for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {

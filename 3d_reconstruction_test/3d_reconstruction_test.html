@@ -18,26 +18,33 @@
   <body>
     <canvas id="scene"></canvas>
 
-    <!-- 4:3 frame that shows up when the camera sits where a photo was taken -->
+    <!-- frame that shows up when the camera sits where a photo was taken -->
     <div id="frame" hidden><span id="frame-label"></span></div>
+
+    <!-- the real photo, shown first every time you switch scenes -->
+    <div id="photo" hidden>
+      <img alt="Photo the scene was rebuilt from" />
+      <span id="photo-label"></span>
+    </div>
 
     <header id="info">
       <a id="home" href="../index.html">Home</a>
       <h1>3D Reconstruction Test</h1>
       <p>
-        A low-poly guess at our Industrial Design studio, rebuilt with
-        three.js from two phone photos.
+        Low-poly guesses at places around school, rebuilt with three.js from
+        photos and drone footage.
       </p>
     </header>
 
     <nav id="controls">
-      <h3>View</h3>
-      <div id="views">
-        <button data-view="photo1">Photo 1</button>
-        <button data-view="photo2">Photo 2</button>
-        <button data-view="overview">Overview</button>
-        <button data-view="plan">Plan</button>
+      <h3>Scene</h3>
+      <div id="scenes" class="buttons">
+        <button data-scene="gate">1 · Old Gate</button>
+        <button data-scene="studio">2 · ID Studio</button>
       </div>
+      <h3>View</h3>
+      <!-- filled in by the script for the scene on screen -->
+      <div id="views" class="buttons"></div>
       <label><input type="checkbox" id="wireframe" /> Wireframe</label>
     </nav>
 

@@ -86,7 +86,8 @@ h3 {
   text-transform: uppercase;
 }
 
-#views {
+/* rows of scene and view buttons */
+.buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
@@ -139,17 +140,19 @@ label input {
   top: 50%;
   left: 50%;
   border: 1px solid var(--ink);
-  /* dims everything outside the photo's 4:3 crop */
+  /* dims everything outside the photo's crop */
   box-shadow: 0 0 0 100vmax rgb(246 238 233 / 0.55);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
 
-#frame[hidden] {
+#frame[hidden],
+#photo[hidden] {
   display: none;
 }
 
-#frame-label {
+#frame-label,
+#photo-label {
   position: absolute;
   top: -1px;
   right: -1px;
@@ -159,6 +162,35 @@ label input {
   font-size: 0.7rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+/* the real photo: fades in on top, then away to show the model behind it */
+#photo {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  /* plain paper around the photo while it is up */
+  box-shadow: 0 0 0 100vmax var(--paper);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+
+#photo.show {
+  opacity: 1;
+}
+
+/* the slower fade-out reveals the model */
+#photo:not(.show) {
+  transition-duration: 1.2s;
+}
+
+#photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* phones: keep the panels small so the model stays visible */

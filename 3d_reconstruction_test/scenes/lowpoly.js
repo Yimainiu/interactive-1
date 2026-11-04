@@ -103,8 +103,12 @@ export function batch() {
     box(w, h, d, color, x, y, z) {
       const geo = new THREE.BoxGeometry(w, h, d);
       geo.translate(x, y + h / 2, z);
+      this.add(geo, color);
+    },
+    // any shape, already moved into place
+    add(geo, color) {
       if (!parts.has(color)) parts.set(color, []);
-      parts.get(color).push(geo);
+      parts.get(color).push(geo.index ? geo.toNonIndexed() : geo);
     },
     addTo(parent, castShadow = false) {
       for (const [color, geos] of parts) {
@@ -115,6 +119,17 @@ export function batch() {
       }
     },
   };
+}
+
+// one group per entry in a scene's `layers` list, so the panel can hide them
+export function makeLayers(scene, list) {
+  const layers = {};
+  for (const { key } of list) {
+    layers[key] = new THREE.Group();
+    scene.add(layers[key]);
+  }
+  scene.userData.layers = layers;
+  return layers;
 }
 
 // flat ground made of irregular triangles, one shade per triangle

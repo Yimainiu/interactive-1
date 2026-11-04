@@ -3,16 +3,18 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { materials } from "./scenes/lowpoly.js";
 import oldGate from "./scenes/old_gate.js";
 import idStudio from "./scenes/id_studio.js";
+import mainGate from "./scenes/main_gate.js";
 
 /* ------------------------------------------------------------------
    3D Reconstruction Test
    Low-poly scenes rebuilt from photos. Switching scenes first shows
    the photo, then fades it away to reveal the model from the same
-   camera position.
+   camera position. The panel switches between the photo, the
+   low-poly model and its wireframe, and hides groups of objects.
 ------------------------------------------------------------------- */
 
 // scene 1, scene 2, ... in button order
-const SCENES = { gate: oldGate, studio: idStudio };
+const SCENES = { gate: oldGate, studio: idStudio, main: mainGate };
 
 const PHOTO_HOLD = 1600; // ms the photo stays up before the model shows
 // keep these two in sync with #photo's transitions in the CSS
@@ -27,10 +29,10 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 300);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 400);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.maxDistance = 120;
+controls.maxDistance = 160;
 
 // ---------- page elements ----------
 
@@ -40,14 +42,17 @@ const photo = document.querySelector("#photo");
 const photoImg = photo.querySelector("img");
 const photoLabel = document.querySelector("#photo-label");
 const sceneButtons = document.querySelectorAll("#scenes button");
+const modeButtons = document.querySelectorAll("#modes button");
 const viewBox = document.querySelector("#views");
-const wireframe = document.querySelector("#wireframe");
+const layerBox = document.querySelector("#layers");
 
 const built = {}; // each scene is built the first time it's shown
 let active = null; // key of the scene on screen
 let current = null; // key of the view the camera sits at
 let tween = null;
 let intro = null; // the photo-then-model sequence that is running, if any
+let mode = "lowpoly"; // what the panel shows as picked: photo, lowpoly or wire
+let modelMode = "lowpoly"; // the model look to return to after a photo
 
 // ---------- views ----------
 
@@ -116,16 +121,71 @@ function updateTween(now) {
   if (t === 1) tween = null;
 }
 
-// ---------- scenes ----------
+// ---------- display: photo, low-poly or wireframe ----------
 
 const wait = (ms) => new Promise((done) => setTimeout(done, ms));
+
+function setModeButtons(name) {
+  mode = name;
+  modeButtons.forEach((b) => b.classList.toggle("active", b.dataset.mode === name));
+}
+
+// fades the real photo in over the frame; resolves once it's loaded
+async function showPhoto(spec) {
+  photoImg.src = spec.src;
+  photoLabel.textContent = `Photo · ${spec.name}`;
+  try {
+    await photoImg.decode();
+  } catch {
+    // photo failed to load: the model stays visible
+  }
+  photoFov(spec);
+  photo.hidden = false;
+  photo.getBoundingClientRect(); // start the fade from opacity 0
+  photo.classList.add("show");
+}
+
+function hidePhoto() {
+  photo.classList.remove("show");
+  setTimeout(() => {
+    if (!photo.classList.contains("show")) photo.hidden = true;
+  }, FADE_OUT);
+}
+
+function setModel(name) {
+  modelMode = name;
+  materials.forEach((m) => (m.wireframe = name === "wire"));
+  setModeButtons(name);
+  hidePhoto();
+}
+
+// photo mode: stand where a photo was taken and show it
+function photoMode() {
+  const views = SCENES[active].views;
+  if (!current || !views[current].photo) {
+    current = Object.keys(views).find((name) => views[name].photo);
+  }
+  goTo(current, true);
+  setModeButtons("photo");
+  showPhoto(views[current].photo);
+}
+
+modeButtons.forEach((b) =>
+  b.addEventListener("click", () => {
+    stopIntro();
+    if (b.dataset.mode === "photo") photoMode();
+    else setModel(b.dataset.mode);
+  }),
+);
+
+// ---------- scenes ----------
 
 function showScene(key) {
   const def = SCENES[key];
   if (!built[key]) {
     built[key] = def.build();
     built[key].background = new THREE.Color("#f6eee9");
-    materials.forEach((m) => (m.wireframe = wireframe.checked));
+    materials.forEach((m) => (m.wireframe = modelMode === "wire"));
   }
   active = key;
   sceneButtons.forEach((b) => b.classList.toggle("active", b.dataset.scene === key));
@@ -137,9 +197,31 @@ function showScene(key) {
       b.dataset.view = name;
       b.addEventListener("click", () => {
         stopIntro();
-        if (SCENES[active].views[name]) goTo(name);
+        if (!SCENES[active].views[name]) return;
+        // in photo mode, photo views show their photo; other views go back to the model
+        if (mode === "photo" && view.photo) {
+          goTo(name, true);
+          showPhoto(view.photo);
+        } else {
+          if (mode === "photo") setModel(modelMode);
+          goTo(name);
+        }
       });
       return b;
+    }),
+  );
+
+  // one checkbox per group of objects the scene can hide
+  const groups = built[key].userData.layers;
+  layerBox.replaceChildren(
+    ...def.layers.map(({ key: name, label }) => {
+      const row = document.createElement("label");
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.checked = groups[name].visible;
+      box.addEventListener("change", () => (groups[name].visible = box.checked));
+      row.append(box, ` ${label}`);
+      return row;
     }),
   );
 }
@@ -151,25 +233,15 @@ async function switchScene(key) {
   const run = { key };
   intro = run;
 
-  const view = def.views[def.photo.view];
-  photoImg.src = def.photo.src;
-  photoLabel.textContent = `Photo · ${view.photo.name}`;
-  try {
-    await photoImg.decode();
-  } catch {
-    // photo failed to load: just show the model
-  }
+  const spec = def.views[def.intro].photo;
+  setModeButtons("photo");
+  await showPhoto(spec);
   if (intro !== run) return;
-
-  photoFov(view.photo);
-  photo.hidden = false;
-  photo.getBoundingClientRect(); // start the fade from opacity 0
-  photo.classList.add("show");
   await wait(FADE_IN);
   if (intro !== run) return;
 
   showScene(key);
-  goTo(def.photo.view, true);
+  goTo(def.intro, true);
   await wait(PHOTO_HOLD);
   if (intro !== run) return;
 
@@ -178,30 +250,25 @@ async function switchScene(key) {
 
 // ends the sequence early (a click or a drag); the new scene still shows
 function stopIntro() {
-  if (intro && active !== intro.key) {
+  if (!intro) return;
+  if (active !== intro.key) {
     showScene(intro.key);
-    goTo(SCENES[intro.key].photo.view, true);
+    goTo(SCENES[intro.key].intro, true);
   }
   intro = null;
-  photo.classList.remove("show");
-  setTimeout(() => {
-    if (!photo.classList.contains("show")) photo.hidden = true;
-  }, FADE_OUT);
+  setModel(modelMode);
 }
 
 sceneButtons.forEach((b) => b.addEventListener("click", () => switchScene(b.dataset.scene)));
 
 // once you drag, you're no longer standing where the photo was taken
 controls.addEventListener("start", () => {
-  if (intro) stopIntro();
+  stopIntro();
+  if (mode === "photo") setModel(modelMode);
   tween = null;
   frame.hidden = true;
   viewBox.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
   current = null;
-});
-
-wireframe.addEventListener("change", () => {
-  materials.forEach((m) => (m.wireframe = wireframe.checked));
 });
 
 function resize() {
@@ -216,7 +283,7 @@ window.addEventListener("resize", resize);
 resize();
 
 // the page opens on scene 1 with its photo. A link can pick a scene,
-// e.g. #studio, or go straight to one view of it, e.g. #studio/photo2
+// e.g. #studio, or go straight to one view of it, e.g. #studio/aisle
 const [startScene, startView] = location.hash.slice(1).split("/");
 if (SCENES[startScene] && SCENES[startScene].views[startView]) {
   showScene(startScene);

@@ -11,6 +11,7 @@ import {
   place,
   batch,
   facetedGround,
+  makeLayers,
   standingPerson,
 } from "./lowpoly.js";
 
@@ -61,6 +62,7 @@ const WALL = 8.9; // facade height above the sidewalk
 const DOOR = { w: 3.4, h: 3.3, depth: 0.6 }; // the recessed entrance bay
 
 let scene;
+let layers; // groups the panel can show or hide
 
 /* ==================================================================
    GROUND
@@ -128,14 +130,14 @@ function buildBuilding() {
   ]);
   const monitorGeo = new THREE.ExtrudeGeometry(slope, { depth: 62, bevelEnabled: false });
   monitorGeo.rotateY(Math.PI / 2); // extrude along x, shape x becomes -z
-  addMesh(scene, monitorGeo, mat(C.monitor), -28, top, 0);
-  box(scene, 62, 0.3, 0.12, "#5f6264", 3, top, -3.66);
+  addMesh(layers.roof, monitorGeo, mat(C.monitor), -28, top, 0);
+  box(layers.roof, 62, 0.3, 0.12, "#5f6264", 3, top, -3.66);
   for (let z = -15; z >= -24; z -= 2.6) {
-    const panel = box(scene, 52, 0.08, 1.8, C.solar, 2, top + 0.55, z);
+    const panel = box(layers.roof, 52, 0.08, 1.8, C.solar, 2, top + 0.55, z);
     panel.rotation.x = -0.28;
   }
   for (const [x, z] of [[-24, -18], [-21.5, -22], [26, -20], [14, -24]]) {
-    box(scene, 2.2, 1.1, 1.6, C.hvac, x, top, z);
+    box(layers.roof, 2.2, 1.1, 1.6, C.hvac, x, top, z);
   }
 
   const parts = batch();
@@ -200,7 +202,7 @@ function buildBuilding() {
 
 // rusty-leaved street tree: trunk, two limbs, a few chunky blobs
 function bigTree(x, z, s = 1) {
-  const g = place(scene, x, z, rand() * 360, WALK.height);
+  const g = place(layers.trees, x, z, rand() * 360, WALK.height);
   cyl(g, 0.12 * s, 0.17 * s, 2.7 * s, 6, C.trunk, 0, 0, 0);
   bar(g, [0, 2.3 * s, 0], [0.8 * s, 3.7 * s, 0.2 * s], 0.14 * s, C.trunk);
   bar(g, [0, 2.5 * s, 0], [-0.7 * s, 3.9 * s, -0.3 * s], 0.13 * s, C.trunk);
@@ -219,7 +221,7 @@ function bigTree(x, z, s = 1) {
 
 // newly planted tree held up by two stakes
 function youngTree(x, z) {
-  const g = place(scene, x, z, 0, WALK.height);
+  const g = place(layers.trees, x, z, 0, WALK.height);
   cyl(g, 0.04, 0.05, 2.7, 5, C.trunk, 0, 0, 0);
   for (const sx of [-0.28, 0.28]) bar(g, [sx, 0, 0], [sx, 2.0, 0], 0.06, C.stake);
   bar(g, [-0.28, 1.6, 0], [0.28, 1.6, 0], 0.05, C.stake);
@@ -236,14 +238,14 @@ function wire(a, b, sag) {
     a[2] + (b[2] - a[2]) * t,
   ];
   for (let i = 0; i < 4; i++) {
-    bar(scene, at(i / 4), at((i + 1) / 4), 0.03, C.wire).castShadow = false;
+    bar(layers.power, at(i / 4), at((i + 1) / 4), 0.03, C.wire).castShadow = false;
   }
 }
 
 function utilityPole(x, z) {
-  cyl(scene, 0.13, 0.18, 13, 7, C.pole, x, WALK.height, z);
-  cyl(scene, 0.2, 0.2, 1.8, 7, C.yellow, x, WALK.height, z);
-  bar(scene, [x - 1.2, 11.6, z], [x + 1.2, 11.6, z], 0.12, C.pole);
+  cyl(layers.power, 0.13, 0.18, 13, 7, C.pole, x, WALK.height, z);
+  cyl(layers.power, 0.2, 0.2, 1.8, 7, C.yellow, x, WALK.height, z);
+  bar(layers.power, [x - 1.2, 11.6, z], [x + 1.2, 11.6, z], 0.12, C.pole);
   wire([x - 1.1, 11.7, z], [SITE.left, 11.4, z], 0.6);
   wire([x + 1.1, 11.7, z], [SITE.right, 11.4, z], 0.6);
   wire([x, 13, z], [SITE.right, 10.5, SITE.front - 4], 0.8);
@@ -272,7 +274,7 @@ const CARS = {
 
 function car(x, type, color, skew = 0) {
   const s = CARS[type];
-  const g = place(scene, x, WALK.depth + 0.45 + s.len / 2, 90 + skew);
+  const g = place(layers.cars, x, WALK.depth + 0.45 + s.len / 2, 90 + skew);
   box(g, s.len, s.body, s.wid, color, 0, 0.3, 0);
   taperedBox(g, s.cab, s.cabH, s.wid - 0.1, s.cabTop, s.wid - 0.35, C.carGlass, s.at, 0.3 + s.body, 0, s.slant);
   box(g, s.cabTop - 0.1, 0.05, s.wid - 0.4, color, s.at + s.slant, 0.3 + s.body + s.cabH, 0);
@@ -284,7 +286,7 @@ function car(x, type, color, skew = 0) {
 function workTruck(x, utility, skew = 0) {
   const len = utility ? 6.4 : 5.8;
   const wid = 2.0;
-  const g = place(scene, x, WALK.depth + 0.45 + len / 2, 90 + skew);
+  const g = place(layers.cars, x, WALK.depth + 0.45 + len / 2, 90 + skew);
   const cabX = len / 2 - 1.6;
   box(g, len, 0.75, wid, C.white, 0, 0.4, 0);
   taperedBox(g, 1.9, 0.62, wid - 0.1, 1.5, wid - 0.3, C.carGlass, cabX, 1.15, 0, -0.15);
@@ -344,7 +346,7 @@ function buildStreet() {
   car(29.1, "sedan", "#2a2c30");
 
   // someone heading for the door
-  standingPerson(scene, -1.3, 1.1, 35, "#2a2d33", "#3a3f4a").position.y = WALK.height;
+  standingPerson(layers.people, -1.3, 1.1, 35, "#2a2d33", "#3a3f4a").position.y = WALK.height;
 
   // orange plastic barriers where the drone took off
   for (let i = 0; i < 5; i++) {
@@ -391,12 +393,19 @@ const STREET = [-0.5, 1.5, 7];
 
 export default {
   title: "Old Gate",
-  photo: { src: "photos/old_gate.jpg", view: "drone" },
+  intro: "drone",
+  layers: [
+    { key: "cars", label: "Cars" },
+    { key: "trees", label: "Trees" },
+    { key: "power", label: "Power lines" },
+    { key: "people", label: "People" },
+    { key: "roof", label: "Roof gear" },
+  ],
   views: {
     // DJI drone camera: 24 mm equiv., 16:9 photos
-    drone: { label: "Drone", pos: DRONE, target: aim(DRONE, -10.6, 26.7), photo: { fov: 43, aspect: 16 / 9, name: "DJI_0007" } },
+    drone: { label: "Drone", pos: DRONE, target: aim(DRONE, -10.6, 26.7), photo: { fov: 43, aspect: 16 / 9, name: "DJI_0007", src: "photos/old_gate.jpg" } },
     // iPhone 16 Pro main camera: 24 mm equiv., 4:3 photos
-    street: { label: "Street", pos: STREET, target: aim(STREET, 0, 5.4), photo: { fov: 56.8, aspect: 4 / 3, name: "IMG_4594" } },
+    street: { label: "Street", pos: STREET, target: aim(STREET, 0, 5.4), photo: { fov: 56.8, aspect: 4 / 3, name: "IMG_4594", src: "photos/old_gate_street.jpg" } },
     overview: { label: "Overview", pos: [-28, 24, 36], target: [0, 2, 0], fov: 45 },
     plan: { label: "Plan", pos: [0, 80, -1.99], target: [0, 0, -2], fov: 45 },
   },
@@ -404,6 +413,7 @@ export default {
   build() {
     reseed(7);
     scene = new THREE.Scene();
+    layers = makeLayers(scene, this.layers);
     buildLights();
     buildGround();
     buildBuilding();

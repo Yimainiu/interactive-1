@@ -41,11 +41,19 @@
       <div id="scenes" class="buttons">
         <button data-scene="gate">1 · Old Gate</button>
         <button data-scene="studio">2 · ID Studio</button>
+        <button data-scene="main">3 · Main Gate</button>
+      </div>
+      <h3>Display</h3>
+      <div id="modes" class="buttons">
+        <button data-mode="photo">Photo</button>
+        <button data-mode="lowpoly" class="active">Low-poly</button>
+        <button data-mode="wire">Wireframe</button>
       </div>
       <h3>View</h3>
-      <!-- filled in by the script for the scene on screen -->
+      <!-- views and layers are filled in by the script for the scene on screen -->
       <div id="views" class="buttons"></div>
-      <label><input type="checkbox" id="wireframe" /> Wireframe</label>
+      <h3>Show</h3>
+      <div id="layers"></div>
     </nav>
 
     <p id="hint">Drag to orbit · scroll to zoom · right-drag to pan</p>

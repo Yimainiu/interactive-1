@@ -17,30 +17,37 @@ import {
 
 /* ------------------------------------------------------------------
    Scene 2: ID Studio
-   A rough low-poly rebuild of the ID studio, laid out from the
-   photo set, panorama and walk-around video in Space Media/ID Studio.
+   Rebuilt from measurements, not by eye. The 20 photos and 58 frames of
+   the 360° video in Space Media/ID Studio were solved together with
+   structure-from-motion (COLMAP, lens data from EXIF). The solve was
+   levelled with the room's vertical lines, squared to its walls, and
+   scaled with the EXIT sign (6 in letters), which also puts the tables
+   at 0.91 m and the phone at eye height. Every position below comes from
+   that solve: floor contacts, plane intersections and triangulated
+   corners.
 
-   Units are metres. x runs to the right, y is up and the window
-   wall is at the back (-z). The long aisle with the EXIT sign runs
-   along the front (+z), with glass-walled rooms on its far side;
-   the corridor leaves from the back left corner.
+   Units are metres. x runs along the circulation spine (+x toward the
+   white corridor), z crosses it (+z toward the windows), y is up. The
+   origin is the floor under the spot where the 360° video was shot.
 ------------------------------------------------------------------- */
 
 // ---------- colours picked from the photos ----------
 const C = {
   floor: "#7d7568",
   base: "#4f483f",
-  wall: "#efece4",
-  panel: "#c9c3a3",
-  ceiling: "#ece3c8",
+  wall: "#ecebe4",
+  board: "#cfc3a4",
+  ceiling: "#e8dcc2",
+  joist: "#d9c49c",
   steel: "#a9aeb1",
   glass: "#f4f6f2",
-  shade: "#3f4245",
+  roomGlass: "#b8c7c9",
+  shade: "#3d4043",
   wood: "#d6a463",
   frame: "#efefea",
   cardboard: "#c49a66",
+  cardboardDark: "#b38957",
   black: "#2a292c",
-  board: "#333236",
   yellow: "#f2c12e",
   white: "#f7f5f0",
   grey: "#9a9b9d",
@@ -49,31 +56,45 @@ const C = {
   lime: "#b9e05a",
   pink: "#e86a8a",
   concrete: "#d9d6cd",
-  roomGlass: "#b8c7c9",
 };
 
-const ROOM = { left: -10, right: 13, back: -13, front: 2.6, height: 6 };
-const CORRIDOR = { left: -6.5, right: -3.2, end: -24, height: 3.4 };
-const AISLE = { near: -2.4, far: 0.6 }; // z range of the EXIT aisle
-const GLASS_Z = 1.2; // front of the glass-walled rooms
-const AISLE_END = 38; // where the long aisle stops, well past the studio
-const PANEL = { bottom: 1.0, top: 2.5 }; // the hanging beige tack boards
+// ---------- measured layout (m) ----------
+// the studio bay sits between two lines of hanging tack boards and the window wall
+const BAY = { x0: -4.12, x1: 4.12, z0: 0.75, z1: 7.12 };
+// the circulation spine: EXIT aisle toward -x, white corridor toward +x
+const SPINE = { z0: -1.35, z1: 0.75 };
+const CEIL = 3.6;
+// mullions on a 1.99 m grid; shade bottoms of the four bays in the studio, left to right
+const WIN = { sill: 1.0, head: 3.3, bay: 1.9875, first: -3.85, shades: [1.45, 1.25, 1.3, 2.85] };
+const BOARD = { bottom: 1.0, top: 2.05, rail: 2.1 };
+const GRID = 2.5; // steel grid the cord reels hang from
+const TOP = 0.91; // bench tops
+// round concrete columns (r 0.17) with a squared white pier on their -z side
+const COLUMNS = [
+  { x: 4.2, z: -1.29, pier: [4.01, 4.41, -1.62, -1.42] },
+  { x: -3.95, z: -1.36, pier: [-4.18, -3.78, -1.66, -1.48] },
+];
+// extent of the model
+const MODEL = { x0: -10, x1: 10.5, z0: -6.8, z1: BAY.z1 };
+const CORRIDOR = { x0: 4.45, x1: 22, open: 9.5, ceil: 3.2 };
+const AISLE = { x1: -18, glassFrom: -5.6, glassZ: -1.05 };
+
+// ceilings face down, away from the sky light: let them glow a little instead of going dark
+const LIT = { emissive: "#bfb7a6", emissiveIntensity: 0.55 };
 
 let scene;
 let layers; // groups the panel can show or hide
 // roof parts also hide when the camera flies above the room, like a dollhouse
 let roof;
-// window frames and thin structure that shouldn't stripe the floor with shadows
+// window frames: thin stuff that shouldn't stripe the floor with shadows
 let shell;
-// the cable grid: stays when the roof hides, goes with the Ceiling checkbox
-let grid;
 
 /* ==================================================================
-   ROOM SHELL
+   SMALL BUILDERS
 ================================================================== */
 
-// one-sided wall: visible from inside, see-through from outside
-function wall(w, h, color, x, y, z, turnDeg, parent = scene) {
+// one-sided wall plane facing +z before turning; y is its bottom
+function wall(parent, w, h, color, x, y, z, turnDeg) {
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat(color));
   mesh.position.set(x, y + h / 2, z);
   mesh.rotation.y = THREE.MathUtils.degToRad(turnDeg);
@@ -82,274 +103,57 @@ function wall(w, h, color, x, y, z, turnDeg, parent = scene) {
   return mesh;
 }
 
-function buildFloor() {
-  const w = ROOM.right - ROOM.left;
-  const d = ROOM.front - ROOM.back;
-  const x = ROOM.left + w / 2;
-  const z = ROOM.back + d / 2;
-  facetedGround(scene, w, d, C.floor, x, z, 0.68);
-  box(scene, w, 0.4, d, C.base, x, -0.41, z);
-
-  // the corridor floor and its slab
-  const cw = CORRIDOR.right - CORRIDOR.left;
-  const cd = ROOM.back - CORRIDOR.end;
-  const cx = CORRIDOR.left + cw / 2;
-  const cz = CORRIDOR.end + cd / 2;
-  facetedGround(scene, cw, cd, C.floor, cx, cz, 0.68);
-  box(scene, cw, 0.4, cd, C.base, cx, -0.41, cz);
-
-  // yellow tape on the floor by the column in the aisle
-  const tape = batch();
-  tape.box(1.6, 0.005, 0.06, C.yellow, 4.4, 0.005, AISLE.far - 0.05);
-  tape.box(0.06, 0.005, 1.0, C.yellow, 3.6, 0.005, AISLE.far - 0.55);
-  tape.addTo(scene);
-}
-
-function buildWalls() {
-  const w = ROOM.right - ROOM.left;
-  const d = ROOM.front - ROOM.back;
-  const midZ = ROOM.back + d / 2;
-
-  // back wall: big factory windows from the corridor to the right wall
-  const winL = CORRIDOR.right;
-  const winW = ROOM.right - winL;
-  const winX = winL + winW / 2;
-  const sill = 0.8;
-  const head = 5.3;
-  wall(winW, sill, C.wall, winX, 0, ROOM.back, 0);
-  wall(winW, ROOM.height - head, C.wall, winX, head, ROOM.back, 0);
-  const glass = new THREE.Mesh(new THREE.PlaneGeometry(winW, head - sill), new THREE.MeshBasicMaterial({ color: C.glass }));
-  glass.position.set(winX, (sill + head) / 2, ROOM.back);
-  scene.add(glass);
-
-  const bays = Math.round(winW / 1.9);
-  const bay = winW / bays;
-  for (let i = 0; i <= bays; i++) {
-    const x = winL + i * bay;
-    bar(shell, [x, sill, ROOM.back + 0.05], [x, head, ROOM.back + 0.05], 0.09, C.steel);
-  }
-  for (const y of [sill, 1.9, 3.1, 4.2, head]) {
-    bar(shell, [winL, y, ROOM.back + 0.05], [ROOM.right, y, ROOM.back + 0.05], 0.07, C.steel);
-  }
-  // dark mesh shades pulled most of the way down, a few left up
-  for (let i = 0; i < bays; i++) {
-    if (rand() < 0.15) continue;
-    const bottom = 1.4 + rand() * 0.5;
-    const shade = box(scene, bay - 0.08, head - bottom, 0.03, C.shade, winL + i * bay + bay / 2, bottom, ROOM.back + 0.12);
-    shade.castShadow = false;
-  }
-
-  // long white counter under the windows, with screens and clutter
-  box(scene, winW, 0.88, 0.65, C.white, winX, 0, ROOM.back + 0.4);
-  const clutter = [C.red, C.yellow, C.white, C.grey, "#f08a3c", C.lime, C.pink];
-  for (let x = winL + 0.5; x < ROOM.right - 0.3; x += 0.5 + rand() * 0.7) {
-    if (rand() < 0.3) {
-      box(scene, 0.55, 0.38, 0.05, "#d9dadc", x, 1.0, ROOM.back + 0.45); // screen
-      box(scene, 0.06, 0.14, 0.06, "#d9dadc", x, 0.88, ROOM.back + 0.45);
-    } else {
-      const h = 0.1 + rand() * 0.3;
-      cyl(scene, 0.06 + rand() * 0.06, 0.1, h, 6, clutter[Math.floor(rand() * clutter.length)], x, 0.88, ROOM.back + 0.45);
-    }
-  }
-
-  // back left: white wall of the room beside the corridor, with model shelves
-  wall(CORRIDOR.left - ROOM.left, ROOM.height, C.wall, (ROOM.left + CORRIDOR.left) / 2, 0, ROOM.back, 0);
-  box(scene, 0.15, 3.2, 4.5, C.wall, CORRIDOR.left - 0.08, 0, ROOM.back + 2.25);
-  shelves(CORRIDOR.left - 0.2, ROOM.back + 1.6, -90);
-  // header over the corridor opening
-  wall(CORRIDOR.right - CORRIDOR.left, ROOM.height - CORRIDOR.height, C.wall, (CORRIDOR.left + CORRIDOR.right) / 2, CORRIDOR.height, ROOM.back, 0);
-
-  // the corridor: white walls, low ceiling, a door and exit light at the end
-  const cd = ROOM.back - CORRIDOR.end;
-  const cz = CORRIDOR.end + cd / 2;
-  wall(cd, CORRIDOR.height, C.wall, CORRIDOR.left, 0, cz, 90);
-  wall(cd, CORRIDOR.height, C.wall, CORRIDOR.right, 0, cz, -90);
-  wall(CORRIDOR.right - CORRIDOR.left, CORRIDOR.height, C.wall, (CORRIDOR.left + CORRIDOR.right) / 2, 0, CORRIDOR.end, 0);
-  box(scene, 1.0, 2.2, 0.05, "#3c6a62", (CORRIDOR.left + CORRIDOR.right) / 2, 0, CORRIDOR.end + 0.03);
-  box(scene, 0.4, 0.15, 0.05, "#55c27a", (CORRIDOR.left + CORRIDOR.right) / 2, 2.6, CORRIDOR.end + 0.03);
-  for (const z of [-15, -18.5, -22]) {
-    box(scene, 0.04, 1.0, 3.0, "#cfd6d8", CORRIDOR.left + 0.03, 1.1, z); // windows into rooms
-  }
-  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(CORRIDOR.right - CORRIDOR.left, cd), mat(C.wall));
-  ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.set((CORRIDOR.left + CORRIDOR.right) / 2, CORRIDOR.height, cz);
-  roof.add(ceiling);
-
-  // concrete column at the corridor mouth
-  cyl(scene, 0.25, 0.25, ROOM.height, 10, C.concrete, CORRIDOR.right + 0.3, 0, ROOM.back + 0.4);
-
-  // side walls (only seen from inside); the left one has a long window into a room
-  wall(d, ROOM.height, C.wall, ROOM.left, 0, midZ, 90);
-  box(scene, 0.04, 1.0, 4.0, "#cfd6d8", ROOM.left + 0.03, 1.2, ROOM.back + 5);
-  wall(d, ROOM.height, C.wall, ROOM.right, 0, midZ, -90);
-  wall(w, ROOM.height, C.wall, (ROOM.left + ROOM.right) / 2, 0, ROOM.front, 180);
-
-  // ceiling: one-sided so it disappears when seen from above
-  const deck = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat(C.ceiling));
-  deck.rotation.x = Math.PI / 2;
-  deck.position.set(ROOM.left + w / 2, ROOM.height, midZ);
-  roof.add(deck);
-}
-
-// the glass-walled rooms along the far side of the aisle; the aisle carries
-// on past the studio's right wall, so it gets its own long strip of building
-function buildAisle() {
-  const ext = AISLE_END - ROOM.right;
-  const ez = (AISLE.near - 0.6 + ROOM.front) / 2;
-  const ed = ROOM.front - AISLE.near + 0.6;
-  facetedGround(scene, ext, ed, C.floor, ROOM.right + ext / 2, ez, 0.68);
-  box(scene, ext, 0.4, ed, C.base, ROOM.right + ext / 2, -0.41, ez);
-  wall(ext, ROOM.height, C.wall, ROOM.right + ext / 2, 0, AISLE.near - 0.6, 0);
-  wall(ed, ROOM.height, C.wall, AISLE_END, 0, ez, -90);
-  wall(ext, ROOM.height, C.wall, ROOM.right + ext / 2, 0, ROOM.front, 180);
-  const extCeiling = new THREE.Mesh(new THREE.PlaneGeometry(ext, ed), mat(C.ceiling));
-  extCeiling.rotation.x = Math.PI / 2;
-  extCeiling.position.set(ROOM.right + ext / 2, ROOM.height, ez);
-  roof.add(extCeiling);
-
-  const roomGlass = new THREE.MeshStandardMaterial({
-    color: C.roomGlass,
-    transparent: true,
-    opacity: 0.35,
-    roughness: 0.1,
-    depthWrite: false,
-  });
-  materials.set("room glass", roomGlass);
-  const len = AISLE_END - ROOM.left;
-  const pane = new THREE.Mesh(new THREE.PlaneGeometry(len, 3.1), roomGlass);
-  pane.position.set(ROOM.left + len / 2, 1.55, GLASS_Z);
-  pane.rotation.y = Math.PI;
-  scene.add(pane);
-  const frames = batch();
-  for (let x = ROOM.left; x <= AISLE_END + 0.01; x += 1.5) {
-    frames.box(0.06, 3.1, 0.08, "#3a3d40", x, 0, GLASS_Z);
-  }
-  for (const y of [0, 1.0, 3.05]) frames.box(len, 0.06, 0.08, "#3a3d40", ROOM.left + len / 2, y, GLASS_Z);
-  frames.box(len, ROOM.height - 3.1, 0.15, C.wall, ROOM.left + len / 2, 3.1, GLASS_Z + 0.05);
-  frames.addTo(shell);
-
-  // shelves of models inside the glass rooms
-  for (const x of [-7, -2.5, 3.5, 8, 11.5, 17, 23, 29, 35]) shelves(x, GLASS_Z + 0.5, 180);
-
-  // round concrete columns along the aisle
-  for (const x of [-7.8, -1.6, 4.6, 10.8, 17, 23.2, 29.4, 35.6]) {
-    cyl(scene, 0.25, 0.25, ROOM.height, 10, C.concrete, x, 0, AISLE.far + 0.25);
-  }
-
-  // recycling bins by a column
-  box(layers.furniture, 0.5, 1.0, 0.5, "#2f63b8", 5.4, 0, GLASS_Z - 0.35);
-  box(layers.furniture, 0.5, 1.0, 0.5, "#3e8a4f", 6.0, 0, GLASS_Z - 0.35);
-  box(layers.furniture, 0.5, 1.0, 0.5, "#2f63b8", 6.6, 0, GLASS_Z - 0.35);
-
-  // red EXIT sign hanging over the aisle, readable from both ends
-  const cv = document.createElement("canvas");
-  cv.width = 256;
-  cv.height = 96;
-  const g = cv.getContext("2d");
-  g.fillStyle = "#c8322c";
-  g.fillRect(0, 0, 256, 96);
-  g.strokeStyle = g.fillStyle = "#fbe9e4";
-  g.lineWidth = 4;
-  g.strokeRect(8, 8, 240, 80);
-  g.font = "bold 58px Arial, Helvetica, sans-serif";
-  g.textAlign = "center";
-  g.textBaseline = "middle";
-  g.fillText("EXIT", 128, 50);
-  const tex = new THREE.CanvasTexture(cv);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const face = new THREE.MeshBasicMaterial({ map: tex });
-  const edge = mat("#c8322c");
-  addMesh(layers.hanging, new THREE.BoxGeometry(0.08, 0.36, 0.95), [face, face, edge, edge, edge, edge], 7.5, 3.4, (AISLE.near + AISLE.far) / 2);
-  const mid = (AISLE.near + AISLE.far) / 2;
-  bar(layers.hanging, [7.5, 3.58, mid - 0.3], [7.5, 4.2, mid - 0.3], 0.02, C.black);
-  bar(layers.hanging, [7.5, 3.58, mid + 0.3], [7.5, 4.2, mid + 0.3], 0.02, C.black);
-}
-
-// white shelving unit with small models on it; faces +z before turning
-function shelves(x, z, turn) {
-  const g = place(scene, x, z, turn);
-  box(g, 2.4, 2.0, 0.04, C.white, 0, 0, -0.2);
-  for (const y of [0.05, 0.5, 0.95, 1.4, 1.85]) box(g, 2.4, 0.03, 0.4, C.white, 0, y, 0);
-  const colors = [C.cardboard, C.white, C.red, "#d8c7a8", C.grey, C.cardboard];
-  for (const y of [0.08, 0.53, 0.98, 1.43]) {
-    for (let x2 = -1.0; x2 < 1.05; x2 += 0.3 + rand() * 0.25) {
-      const h = 0.1 + rand() * 0.25;
-      box(g, 0.14 + rand() * 0.1, h, 0.15, colors[Math.floor(rand() * colors.length)], x2, y, 0);
-    }
-  }
-}
-
-// exposed steel and the cable grid under the ceiling, plus skylights over the aisle
-function buildCeiling() {
-  for (let z = ROOM.back + 0.6; z < ROOM.front; z += 1.4) {
-    box(roof, ROOM.right - ROOM.left, 0.28, 0.12, "#e3d7b5", (ROOM.left + ROOM.right) / 2, ROOM.height - 0.28, z);
-  }
-
-  for (const z of [-11, -7, -3]) {
-    const top = 5.6;
-    const bottom = 4.75;
-    bar(roof, [ROOM.left, top, z], [ROOM.right, top, z], 0.16, C.steel);
-    bar(roof, [ROOM.left, bottom, z], [ROOM.right, bottom, z], 0.16, C.steel);
-    let up = true;
-    for (let x = ROOM.left; x < ROOM.right; x += 1.2) {
-      bar(roof, [x, up ? bottom : top, z], [x + 1.2, up ? top : bottom, z], 0.08, C.steel);
-      up = !up;
-    }
-  }
-
-  // sloped skylights over the aisle
-  const sky = new THREE.MeshBasicMaterial({ color: "#fbfaf4", side: THREE.DoubleSide });
-  const light = new THREE.Mesh(new THREE.PlaneGeometry(AISLE_END - ROOM.left, 2.4), sky);
-  light.position.set((ROOM.left + AISLE_END) / 2, 5.5, (AISLE.near + AISLE.far) / 2);
-  light.rotation.x = Math.PI / 2 - 0.5;
-  roof.add(light);
-
-  const led = new THREE.MeshBasicMaterial({ color: "#fffdf4" });
-  for (const z of [-9.5, -7.8, -4, -2.4]) {
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(ROOM.right - CORRIDOR.right - 1, 0.04, 0.06), led);
-    strip.position.set((CORRIDOR.right + ROOM.right) / 2, 4.5, z);
-    roof.add(strip);
-  }
-
-  // unistrut grid that the cord reels hang from (kept when the roof hides)
-  const gridY = 4.2;
-  for (let z = -11; z <= -2; z += 3) {
-    bar(grid, [ROOM.left + 1, gridY, z], [ROOM.right - 1, gridY, z], 0.06, C.steel);
-  }
-  for (let x = -8; x <= 12; x += 3) {
-    bar(grid, [x, gridY, -11], [x, gridY, -2], 0.06, C.steel);
-  }
-}
-
-/* ==================================================================
-   FURNITURE + OBJECTS
-================================================================== */
-
-// white steel workbench with a butcher-block top
-function workbench(parent, x, z, turn, w = 1.25, d = 0.78, h = 0.92) {
-  const g = place(parent, x, z, turn);
-  box(g, w, 0.05, d, C.wood, 0, h - 0.05, 0);
-  const lx = w / 2 - 0.06;
-  const lz = d / 2 - 0.06;
-  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-    box(g, 0.04, h - 0.13, 0.04, C.frame, sx * lx, 0.08, sz * lz);
-    cyl(g, 0.04, 0.04, 0.08, 6, C.grey, sx * lx, 0, sz * lz);
-  }
-  for (const y of [h - 0.12, 0.2]) {
-    box(g, w - 0.12, 0.04, 0.04, C.frame, 0, y, -lz);
-    box(g, w - 0.12, 0.04, 0.04, C.frame, 0, y, lz);
-    box(g, 0.04, 0.04, d - 0.12, C.frame, -lx, y, 0);
-    box(g, 0.04, 0.04, d - 0.12, C.frame, lx, y, 0);
-  }
-  bar(g, [-lx, 0.22, lz], [lx, h - 0.14, lz], 0.035, C.frame);
-  g.userData.top = h;
+// upright slab standing on the floor between two floor points (cardboard walls, boards)
+function slab(parent, a, b, y0, y1, color, thick = 0.012) {
+  const dx = b[0] - a[0];
+  const dz = b[1] - a[1];
+  const g = place(parent, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, -THREE.MathUtils.radToDeg(Math.atan2(dz, dx)));
+  box(g, Math.hypot(dx, dz), y1 - y0, thick, color, 0, y0, 0);
   return g;
 }
 
-// tall sheet of cardboard used as a divider
-function cardboard(parent, w, h, x, z, turn, y = 0) {
-  const g = place(parent, x, z, turn, y);
-  box(g, w, h, 0.012, C.cardboard, 0, 0, 0);
+// sheets of paper pinned to a board; the board plane is given by its axis
+// axis "x": sheets in the plane x = c facing +x (side +1) or -x (side -1)
+function posters(parent, axis, c, side, a0, a1, y0, y1, count, palette, size = [0.2, 0.28]) {
+  const sheets = batch();
+  for (let i = 0; i < count; i++) {
+    const w = size[0] * (0.8 + rand() * 0.7);
+    const h = size[1] * (0.8 + rand() * 0.6);
+    const a = a0 + w / 2 + rand() * Math.max(0, a1 - a0 - w);
+    const y = y0 + rand() * Math.max(0, y1 - y0 - h);
+    const color = palette[Math.floor(rand() * palette.length)];
+    // just clear of a 30 mm board's face, later sheets a hair in front of earlier ones
+    const off = c + side * (0.02 + i * 0.0004);
+    if (axis === "x") sheets.box(0.004, h, w, color, off, y, a);
+    else sheets.box(w, h, 0.004, color, a, y, off);
+  }
+  sheets.addTo(parent);
+}
+
+// white steel workbench with a butcher-block top, given by its footprint
+function bench(parent, x0, x1, z0, z1, top = TOP) {
+  const g = new THREE.Group();
+  parent.add(g);
+  const w = x1 - x0;
+  const d = z1 - z0;
+  const cx = (x0 + x1) / 2;
+  const cz = (z0 + z1) / 2;
+  box(g, w, 0.045, d, C.wood, cx, top - 0.045, cz);
+  const lx = w / 2 - 0.05;
+  const lz = d / 2 - 0.05;
+  const frame = batch();
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    frame.box(0.04, top - 0.12, 0.04, C.frame, cx + sx * lx, 0.07, cz + sz * lz);
+    frame.box(0.06, 0.07, 0.06, C.grey, cx + sx * lx, 0, cz + sz * lz);
+  }
+  for (const y of [top - 0.12, 0.2]) {
+    frame.box(w - 0.1, 0.04, 0.04, C.frame, cx, y, cz - lz);
+    frame.box(w - 0.1, 0.04, 0.04, C.frame, cx, y, cz + lz);
+    frame.box(0.04, 0.04, d - 0.1, C.frame, cx - lx, y, cz);
+    frame.box(0.04, 0.04, d - 0.1, C.frame, cx + lx, y, cz);
+  }
+  frame.addTo(g, true);
+  bar(g, [cx - lx, 0.22, cz + lz], [cx + lx, top - 0.14, cz + lz], 0.035, C.frame);
   return g;
 }
 
@@ -369,123 +173,48 @@ function stool(parent, x, z, seatH = 0.68) {
   return g;
 }
 
-// pinned sheets of paper on a board: a few headers in colour, the rest white
-function posters(parent, w, h, x0, y0, z, count, colorful = false) {
-  const sheets = batch();
-  for (let i = 0; i < count; i++) {
-    const sw = 0.2 + rand() * 0.15;
-    const sh = 0.26 + rand() * 0.12;
-    const color = colorful && rand() < 0.4 ? [C.pink, C.teal, "#f3d36b", "#9bc3f0"][Math.floor(rand() * 4)] : C.white;
-    sheets.box(sw, sh, 0.004, color, x0 + rand() * (w - sw) + sw / 2, y0 + rand() * (h - sh), z);
-  }
-  sheets.addTo(parent);
-}
-
-// tall cardboard display board on two black posts with feet
-function displayBoard(x, z, turn, withPosters) {
-  const g = place(layers.cardboard, x, z, turn);
-  box(g, 1.25, 2.1, 0.012, C.cardboard, 0, 0.3, 0);
-  for (const px of [-0.6, 0.6]) {
-    box(g, 0.06, 2.3, 0.06, C.black, px, 0, 0.04);
-    box(g, 0.08, 0.05, 0.6, C.black, px, 0, 0.04);
-  }
-  if (withPosters) {
-    posters(g, 1.0, 1.4, -0.5, 0.9, 0.01, 9, true);
-    posters(g, 1.0, 1.0, -0.5, 1.2, -0.01, 5);
-  }
-}
-
-// beige tack board hanging from a track, about a metre off the floor
-function hangingPanel(x0, x1, z, side = 1) {
-  const len = x1 - x0;
-  const cx = (x0 + x1) / 2;
-  const h = PANEL.top - PANEL.bottom;
-  box(layers.boards, len, h, 0.05, C.panel, cx, PANEL.bottom, z);
-  box(layers.boards, len + 0.2, 0.1, 0.12, C.steel, cx, PANEL.top + 0.1, z);
-  for (const x of [x0 + 0.3, x1 - 0.3]) bar(layers.boards, [x, PANEL.top, z], [x, 4.2, z], 0.03, C.steel);
-  return { cx, len, h, face: z + side * 0.03 };
-}
-
-// big black pin-board on a rolling stand
-function pinBoard(parent, x, z, turn) {
+// black school chair on four legs; faces +z before turning
+function chair(parent, x, z, turn) {
   const g = place(parent, x, z, turn);
-  const w = 2.05;
-  box(g, w, 1.15, 0.03, C.board, w / 2, 0.3, 0);
-  for (const px of [0.12, 1.2]) {
-    box(g, 0.05, 1.55, 0.05, C.frame, px, 0.06, -0.06);
-    box(g, 0.06, 0.06, 0.62, C.frame, px, 0.06, -0.06);
-    for (const pz of [-0.34, 0.22]) cyl(g, 0.035, 0.035, 0.06, 6, C.black, px, 0, pz);
+  box(g, 0.42, 0.04, 0.42, C.black, 0, 0.44, 0);
+  box(g, 0.42, 0.32, 0.04, C.black, 0, 0.55, -0.2);
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    bar(g, [sx * 0.18, 0, sz * 0.18], [sx * 0.16, 0.44, sz * 0.16], 0.025, C.grey);
   }
-  box(g, 1.1, 0.02, 0.32, "#3b2f2a", 0.66, 0.24, -0.22);
-  box(g, 0.13, 0.11, 0.004, "#d8f05a", w - 0.18, 1.24, 0.017);
   return g;
 }
 
-// the whiteboard in the new photos: a big hand-drawn ring of writing
-function whiteboardTexture() {
-  const cv = document.createElement("canvas");
-  cv.width = 1024;
-  cv.height = 640;
-  const g = cv.getContext("2d");
-  g.fillStyle = "#fbfbf7";
-  g.fillRect(0, 0, cv.width, cv.height);
-  g.strokeStyle = "#27303b";
-  for (let ring = 0; ring < 5; ring++) {
-    g.lineWidth = 2 + (ring % 2) * 2;
-    g.beginPath();
-    g.ellipse(512, 330, 280 + ring * 18, 250 + ring * 14, -0.1, 0, Math.PI * 2);
-    g.stroke();
+// black office chair on a five-star base
+function officeChair(parent, x, z) {
+  const g = place(parent, x, z, rand() * 360);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    bar(g, [0, 0.08, 0], [Math.cos(a) * 0.3, 0.04, Math.sin(a) * 0.3], 0.04, C.black);
   }
-  // tiny "words" written around the ring
-  g.fillStyle = "#27303b";
-  for (let a = 0; a < Math.PI * 2; a += 0.045) {
-    const r = 345 + Math.sin(a * 7) * 8;
-    g.fillRect(512 + Math.cos(a) * r, 330 + Math.sin(a) * r * 0.85, 10, 3);
-  }
-  g.fillStyle = "#e5508a";
-  g.beginPath();
-  g.arc(960, 70, 14, 0, Math.PI * 2);
-  g.fill();
-  const tex = new THREE.CanvasTexture(cv);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
-  return tex;
-}
-
-function whiteboard(parent, x, z, turn) {
-  const g = place(parent, x, z, turn);
-  const w = 1.7;
-  const front = new THREE.MeshStandardMaterial({ map: whiteboardTexture(), roughness: 0.4 });
-  materials.set("whiteboard", front);
-  const side = mat(C.steel);
-  const board = addMesh(g, new THREE.BoxGeometry(w, 1.15, 0.04), [side, side, side, side, front, side], w / 2, 1.25, 0);
-  board.castShadow = true;
-  for (const px of [0.05, w - 0.05]) {
-    box(g, 0.05, 1.85, 0.05, C.steel, px, 0.05, -0.04);
-    box(g, 0.06, 0.05, 0.6, C.frame, px, 0.05, -0.04);
-  }
-  box(g, w - 0.1, 0.04, 0.04, C.frame, w / 2, 0.45, -0.04);
+  cyl(g, 0.03, 0.03, 0.4, 6, C.black, 0, 0.06, 0);
+  box(g, 0.48, 0.07, 0.46, C.black, 0, 0.46, 0);
+  box(g, 0.44, 0.5, 0.06, C.black, 0, 0.6, -0.22);
   return g;
 }
 
-// yellow retractable cord reel hanging from the grid, cable dropping down
-function cordReel(x, y, z, dropTo) {
-  const g = place(layers.hanging, x, z, 90, y);
-  const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.1, 12), mat(C.yellow));
+// yellow retractable cord reel hanging from the steel grid, cable dropping down
+function cordReel(x, y, z, turn, dropTo) {
+  const g = place(layers.hanging, x, z, turn, y);
+  const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.07, 12), mat(C.yellow));
   reel.rotation.z = Math.PI / 2;
   g.add(reel);
-  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 8), mat(C.black));
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.09, 8), mat(C.black));
   hub.rotation.z = Math.PI / 2;
   g.add(hub);
-  bar(g, [0, 0.2, 0], [0, 4.2 - y, 0], 0.03, C.black);
-  bar(g, [0, -0.2, 0.05], [0.15, dropTo - y, 0.3], 0.02, C.black);
+  bar(g, [0, 0.1, 0], [0, GRID - y, 0], 0.02, C.black);
+  bar(g, [0, -0.09, 0.03], [0.06, dropTo - y, 0.15], 0.014, C.black);
 }
 
-// white ribbed pendant lamp
+// white ribbed pendant lamp, about 15 cm across; y is the bottom of the shade
 function pendantLamp(x, y, z) {
   const profile = [
-    [0.0, 0.0], [0.08, 0.0], [0.13, 0.05], [0.12, 0.1], [0.15, 0.15],
-    [0.14, 0.21], [0.16, 0.26], [0.14, 0.32], [0.1, 0.36], [0.07, 0.38],
+    [0.0, 0.0], [0.04, 0.0], [0.062, 0.022], [0.056, 0.045], [0.073, 0.068],
+    [0.067, 0.096], [0.076, 0.118], [0.067, 0.146], [0.048, 0.163], [0.034, 0.174],
   ].map(([r, h]) => new THREE.Vector2(r, h));
   const shade = new THREE.Mesh(
     new THREE.LatheGeometry(profile, 10),
@@ -493,211 +222,524 @@ function pendantLamp(x, y, z) {
   );
   shade.position.set(x, y, z);
   layers.hanging.add(shade);
-  cyl(layers.hanging, 0.09, 0.09, 0.08, 10, C.black, x, y + 0.37, z);
-  bar(layers.hanging, [x, y + 0.45, z], [x, 4.2, z], 0.015, C.black);
+  bar(layers.hanging, [x, y + 0.174, z], [x, GRID, z], 0.012, C.black);
 }
 
-function printer3d(parent, x, y, z) {
-  const g = place(parent, x, z, 0, y);
-  box(g, 0.42, 0.45, 0.42, C.black, 0, 0, 0);
-  const spool = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.07, 10), mat(C.white));
-  spool.rotation.x = Math.PI / 2;
-  spool.position.set(-0.08, 0.28, 0.25);
-  g.add(spool);
-  const fil = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.075, 10), mat(C.red));
-  fil.rotation.x = Math.PI / 2;
-  fil.position.copy(spool.position);
-  g.add(fil);
+// the hanging red EXIT sign, readable from both ends of the aisle
+function exitSign(x, y, z) {
+  const cv = document.createElement("canvas");
+  cv.width = 256;
+  cv.height = 112;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#b52f2a";
+  g.fillRect(0, 0, 256, 112);
+  g.strokeStyle = g.fillStyle = "#fbe9e4";
+  g.lineWidth = 4;
+  g.strokeRect(8, 8, 240, 96);
+  g.font = "bold 62px Arial, Helvetica, sans-serif";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText("EXIT", 128, 58);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const face = new THREE.MeshBasicMaterial({ map: tex });
+  const edge = mat("#b52f2a");
+  // 6 in letters on a sign about 0.42 x 0.23 m, faces along x
+  addMesh(layers.hanging, new THREE.BoxGeometry(0.06, 0.23, 0.42), [face, face, edge, edge, edge, edge], x, y, z);
+  bar(layers.hanging, [x, y + 0.115, z - 0.15], [x, CEIL, z - 0.15], 0.02, C.black);
+  bar(layers.hanging, [x, y + 0.115, z + 0.15], [x, CEIL, z + 0.15], 0.02, C.black);
+}
+
+// white shelving unit with models on it; its open side faces +z before turning
+function shelves(parent, x, z, turn, w = 1.2, h = 2.0, d = 0.4) {
+  const g = place(parent, x, z, turn);
+  const parts = batch();
+  parts.box(w, h, 0.02, C.white, 0, 0, -d / 2);
+  parts.box(0.03, h, d, C.white, -w / 2, 0, 0);
+  parts.box(0.03, h, d, C.white, w / 2, 0, 0);
+  const levels = [0.08, 0.5, 0.92, 1.34, 1.76];
+  for (const y of levels) parts.box(w, 0.025, d, C.white, 0, y, 0);
+  const colors = [C.cardboard, C.white, C.red, "#d8c7a8", C.grey, C.wood];
+  for (const y of levels.slice(0, -1)) {
+    for (let a = -w / 2 + 0.12; a < w / 2 - 0.1; a += 0.22 + rand() * 0.2) {
+      const mh = 0.1 + rand() * 0.25;
+      parts.box(0.12 + rand() * 0.1, mh, 0.15 + rand() * 0.1, colors[Math.floor(rand() * colors.length)], a, y + 0.025, 0);
+    }
+  }
+  parts.addTo(g, true);
+  return g;
 }
 
 function monitor(parent, x, y, z, turn, color = C.black) {
   const g = place(parent, x, z, turn, y);
   box(g, 0.2, 0.02, 0.16, color, 0, 0, 0);
-  box(g, 0.04, 0.2, 0.03, color, 0, 0, -0.03);
-  box(g, 0.62, 0.38, 0.04, color, 0, 0.16, 0);
-  box(g, 0.58, 0.34, 0.005, "#1d2530", 0, 0.18, 0.022);
+  box(g, 0.04, 0.22, 0.03, color, 0, 0, -0.03);
+  box(g, 0.6, 0.36, 0.035, color, 0, 0.17, 0);
+  box(g, 0.56, 0.32, 0.005, "#1d2530", 0, 0.19, 0.02);
 }
 
-// someone at a desk, kept very simple
-function sittingPerson(parent, x, z, turn) {
-  const g = place(parent, x, z, turn);
-  stool(g, 0, 0, 0.66);
-  bar(g, [0, 0.76, 0.06], [0, 0.78, 0.42], 0.13, "#3b3f48");
-  bar(g, [0, 0.76, 0.42], [0, 0.25, 0.45], 0.1, "#3b3f48");
-  cyl(g, 0.17, 0.2, 0.55, 6, "#2f3440", 0, 0.74, 0);
-  addMesh(g, new THREE.IcosahedronGeometry(0.11, 0), mat("#d9a383"), 0, 1.44, 0.03);
-  addMesh(g, new THREE.IcosahedronGeometry(0.115, 0), mat("#3a2a22"), 0, 1.48, -0.01);
-  bar(g, [0.18, 1.2, 0], [0.12, 1.0, 0.38], 0.07, "#2f3440");
-  bar(g, [-0.18, 1.2, 0], [-0.12, 1.0, 0.38], 0.07, "#2f3440");
-}
-
-function robotArm(parent, x, y, z) {
-  const g = place(parent, x, z, 30, y);
-  cyl(g, 0.12, 0.14, 0.08, 8, C.white, 0, 0, 0);
-  bar(g, [0, 0.08, 0], [0.05, 0.42, 0.05], 0.07, C.white);
-  bar(g, [0.05, 0.42, 0.05], [0.3, 0.5, 0.15], 0.06, C.white);
-  box(g, 0.08, 0.08, 0.08, C.grey, 0.3, 0.46, 0.15);
-}
-
-// open cardboard box with its flaps up
-function bigBox(x, z, turn, w, h, d) {
-  const g = place(layers.cardboard, x, z, turn);
-  box(g, w, h, d, C.cardboard, 0, 0, 0);
-  const flap = box(g, w - 0.1, 0.02, d * 0.6, "#b98f5c", 0, h, d * 0.1);
-  flap.rotation.x = -0.35;
+function printer3d(parent, x, y, z) {
+  const g = place(parent, x, z, 0, y);
+  box(g, 0.42, 0.42, 0.42, C.black, 0, 0, 0);
+  const spool = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.07, 12), mat(C.white));
+  spool.rotation.x = Math.PI / 2;
+  spool.position.set(0, 0.24, -0.25);
+  g.add(spool);
 }
 
 /* ==================================================================
-   LAYOUT  (rough positions, read off the photos)
+   ROOM SHELL
 ================================================================== */
 
-function buildStudio() {
-  const F = layers.furniture;
-  const K = layers.cardboard;
+function buildFloor() {
+  const w = MODEL.x1 - MODEL.x0;
+  const d = MODEL.z1 - MODEL.z0;
+  const x = MODEL.x0 + w / 2;
+  const z = MODEL.z0 + d / 2;
+  facetedGround(scene, w, d, C.floor, x, z, 0.68);
+  box(scene, w, 0.4, d, C.base, x, -0.41, z);
 
-  // --- hanging tack board right behind the pod, with the pin-up collage ---
-  const back = hangingPanel(-3.2, 2.6, -8.6);
-  posters(layers.boards, 2.6, 1.3, 0, PANEL.bottom + 0.1, back.face, 40, true);
-
-  // --- more hanging boards along the aisle, covered in sheets and sticky notes ---
-  for (const [x0, x1] of [[4.9, 7.6], [7.9, 10.6], [10.9, 13.6], [13.9, 16.6], [16.9, 19.6], [24, 27], [30, 33]]) {
-    const p = hangingPanel(x0, x1, AISLE.near - 0.5, 1);
-    posters(layers.boards, x1 - x0 - 0.4, 1.2, x0 + 0.2, PANEL.bottom + 0.15, p.face, 12, true);
+  // the spine carries on as the white corridor (+x) and the EXIT aisle (-x)
+  const sd = SPINE.z1 - SPINE.z0;
+  const sz = (SPINE.z0 + SPINE.z1) / 2;
+  for (const [a, b] of [[MODEL.x1, CORRIDOR.x1], [AISLE.x1, MODEL.x0]]) {
+    facetedGround(scene, b - a, sd, C.floor, (a + b) / 2, sz, 0.68);
+    box(scene, b - a, 0.4, sd, C.base, (a + b) / 2, -0.41, sz);
   }
-  whiteboard(layers.boards, 11.0, AISLE.near - 0.15, 0);
 
-  // --- the ring whiteboard and the black pin-board, side by side at the aisle ---
-  whiteboard(layers.boards, 1.55, -4.3, -56);
-  pinBoard(layers.boards, 2.5, -2.9, 20);
-  bigBox(2.0, -3.8, -56, 0.5, 0.4, 0.4);
-  box(K, 0.32, 0.42, 0.18, "#c9b48a", 2.3, 0, -3.4); // the paper bag
-
-  // --- front pod of benches with cardboard dividers ---
-  const t1 = workbench(F, -0.42, -5.28, 0, 1.1, 0.76);
-  box(t1, 0.42, 0.01, 0.3, C.white, 0.05, t1.userData.top, 0.05);
-  box(t1, 0.3, 0.012, 0.22, "#eef0f6", 0.25, t1.userData.top, 0.1);
-  box(t1, 0.28, 0.02, 0.04, C.lime, 0.0, t1.userData.top + 0.01, -0.05);
-  box(t1, 0.24, 0.02, 0.04, C.lime, 0.3, t1.userData.top + 0.01, -0.12);
-  box(t1, 0.14, 0.02, 0.05, "#3f6fd1", 0.08, t1.userData.top + 0.01, 0.18);
-  cardboard(K, 0.85, 1.4, -0.99, -5.28, 90);
-
-  const t2 = workbench(F, -1.55, -6.5, 0, 1.0, 0.76);
-  box(t2, 0.34, 0.22, 0.22, C.black, -0.15, t2.userData.top, 0);
-  box(t2, 0.34, 0.06, 0.22, C.yellow, -0.15, t2.userData.top + 0.16, 0);
-  box(t2, 0.4, 0.26, 0.26, C.black, 0.25, t2.userData.top, -0.12);
-  box(t2, 0.34, 0.26, 0.24, "#dfe8ec", 0.25, t2.userData.top, 0.18);
-  cardboard(K, 0.85, 1.35, -2.07, -6.5, 90);
-  cardboard(K, 0.36, 0.45, -1.5, -6.17, 0, t2.userData.top);
-
-  const t3 = workbench(F, -0.3, -6.5, 0, 1.3, 0.76);
-  box(t3, 0.85, 0.12, 0.28, C.black, 0.15, t3.userData.top, -0.05);
-  box(t3, 0.45, 0.2, 0.3, "#a8a6a8", -0.35, t3.userData.top, 0.2);
-  box(t3, 0.3, 0.36, 0.18, "#c9b48a", 0.45, t3.userData.top, 0.15);
-  cardboard(K, 0.8, 0.9, 0.37, -6.5, 90, 0.2);
-
-  stool(F, -0.15, -5.9);
-  stool(F, -1.3, -5.95);
-
-  // round fibre drum under the end of the hanging board
-  cyl(F, 0.29, 0.29, 0.95, 10, "#cfa772", -2.6, 0, -8.15);
-  cyl(F, 0.3, 0.3, 0.04, 10, C.steel, -2.6, 0.92, -8.15);
-
-  // --- 3D printer table in front of the collage ---
-  const t4 = workbench(F, 0.7, -7.75, 0, 1.8, 0.76);
-  printer3d(t4, 0.4, t4.userData.top, -0.05);
-  box(t4, 0.35, 0.16, 0.22, "#7f8487", -0.1, t4.userData.top, 0.05);
-  box(t4, 0.2, 0.2, 0.2, C.red, -0.5, t4.userData.top, -0.1);
-  box(t4, 0.3, 0.4, 0.02, C.white, -0.75, t4.userData.top, 0.1);
-
-  // --- desks behind the hanging board, along the windows ---
-  for (const x of [-1.6, 0.4]) {
-    const d = workbench(F, x, -10.6, 0, 1.8, 0.8);
-    stool(F, x + 0.3, -9.8);
-    box(d, 0.5, 0.06, 0.35, C.white, 0, d.userData.top, 0);
-  }
-  cardboard(K, 2.4, 1.55, 2.6, -9.7, 0);
-  const desk = workbench(F, 3.55, -10.4, 90, 1.8, 0.75);
-  monitor(desk, 0.0, desk.userData.top, -0.05, 90, "#d9dadc");
-  sittingPerson(layers.people, 4.25, -10.2, -90);
-
-  // --- cardboard cubicles and big open boxes in the middle ---
-  bigBox(2.9, -4.9, 0, 1.7, 1.3, 1.1);
-  bigBox(5.0, -4.6, 8, 1.2, 1.2, 1.0);
-  cardboard(K, 2.2, 1.3, 5.6, -5.9, 0);
-  cardboard(K, 1.6, 1.3, 6.7, -6.7, 90);
-  cardboard(K, 2.0, 1.3, 8.4, -7.6, 0);
-  stool(F, 7.6, -6.5);
-
-  const t6 = workbench(F, 4.3, -7.0, 0, 1.6, 0.8);
-  robotArm(t6, -0.2, t6.userData.top, 0);
-  box(t6, 0.6, 0.45, 0.4, C.cardboard, 0.45, t6.userData.top, 0);
-  monitor(t6, 0.4, t6.userData.top, -0.35, 0);
-  cyl(t6, 0.05, 0.05, 0.25, 6, C.yellow, -0.6, t6.userData.top, -0.2);
-  addMesh(t6, new THREE.IcosahedronGeometry(0.12, 0), mat(C.yellow), -0.6, t6.userData.top + 0.3, -0.2);
-
-
-  // benches toward the right-hand windows
-  workbench(F, 6.6, -9.4, 0, 1.8, 0.8);
-  monitor(F, 6.3, 0.92, -9.55, 0);
-  workbench(F, 9.4, -9.4, 0, 1.8, 0.8);
-  workbench(F, 9.4, -4.8, 0, 1.8, 0.8);
-  stool(F, 9.0, -4.0);
-
-  // --- display boards for the review, standing in a zigzag by the open floor ---
-  const boards = [[-4.5, -8.6, 80, true], [-4.1, -7.2, 100, true], [-4.6, -5.8, 75, false], [-4.2, -4.4, 105, true], [-4.7, -3.0, 85, true]];
-  for (const [x, z, turn, p] of boards) displayBoard(x, z, turn, p);
-
-  // someone walking down the aisle
-  standingPerson(layers.people, 22, -0.6, 80, "#3a3640", "#2c2f38");
+  // yellow tape on the floor in the aisle, by the display boards
+  const tape = batch();
+  tape.box(0.92, 0.004, 0.06, C.yellow, -3.05, 0.002, -1.2);
+  tape.box(0.06, 0.004, 0.46, C.yellow, -2.6, 0.002, -1.4);
+  tape.addTo(scene);
 }
 
-function buildHangingStuff() {
-  for (const [x, y, z, drop] of [[-1.4, 3.7, -9.5, 1.2], [-0.2, 3.45, -11.5, 1.5], [2.6, 3.55, -12, 1.6], [3.05, 3.55, -12, 1.6], [4.3, 3.7, -10.8, 1.3], [-3.2, 3.7, -4.8, 1.4], [0.9, 3.8, -4.6, 1.3], [6.5, 3.7, -3.5, 1.4]]) {
-    cordReel(x, y, z, drop);
+function buildWindowWall() {
+  const z = BAY.z1;
+  const w = MODEL.x1 - MODEL.x0;
+  const mid = (MODEL.x0 + MODEL.x1) / 2;
+  wall(scene, w, WIN.sill, C.wall, mid, 0, z, 180);
+  wall(scene, w, CEIL - WIN.head, C.wall, mid, WIN.head, z, 180);
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, WIN.head - WIN.sill), new THREE.MeshBasicMaterial({ color: C.glass }));
+  glass.position.set(mid, (WIN.sill + WIN.head) / 2, z + 0.01);
+  glass.rotation.y = Math.PI;
+  scene.add(glass);
+
+  // mullions every 2 m, lined up with the bay; transoms; mesh shades pulled to different heights
+  const frames = batch();
+  const first = Math.ceil((MODEL.x0 - WIN.first) / WIN.bay);
+  const last = Math.floor((MODEL.x1 - WIN.first) / WIN.bay);
+  for (let k = first; k <= last; k++) {
+    frames.box(0.09, WIN.head - WIN.sill, 0.08, C.steel, WIN.first + k * WIN.bay, WIN.sill, z - 0.04);
   }
-  for (const [x, z, y] of [[1.25, -6.6, 1.0], [2.0, -5.6, 1.3], [-0.9, -4.6, 1.6], [3.5, -7.8, 1.1]]) {
-    bar(layers.hanging, [x, 4.2, z], [x + 0.1, y, z + 0.1], 0.02, C.black);
+  for (const y of [WIN.sill - 0.03, 1.75, 2.5, WIN.head - 0.04]) frames.box(w, 0.06, 0.07, C.steel, mid, y, z - 0.04);
+  for (let k = first; k < last; k++) {
+    const x0 = WIN.first + k * WIN.bay;
+    // measured in the studio's four bays, a guess elsewhere
+    const bottom = k >= 0 && k < WIN.shades.length ? WIN.shades[k] : 1.25 + rand() * 0.4;
+    frames.box(WIN.bay - 0.1, WIN.head - bottom, 0.02, C.shade, x0 + WIN.bay / 2, bottom, z - 0.1);
   }
-  pendantLamp(3.4, 2.35, -7.2);
-  pendantLamp(4.3, 2.3, -3.4);
+  frames.addTo(shell);
+  // white piers where the column lines meet the window wall
+  for (const x of [-4.1, 4.2]) box(scene, 0.45, CEIL, 0.3, C.wall, x, 0, z - 0.15);
+}
+
+// round concrete columns on the spine, one at each end of the bay
+function buildColumns() {
+  for (const { x, z, pier } of COLUMNS) {
+    cyl(scene, 0.17, 0.17, CEIL, 12, C.concrete, x, 0, z);
+    const [x0, x1, z0, z1] = pier;
+    box(scene, x1 - x0, CEIL, z1 - z0, C.wall, (x0 + x1) / 2, 0, (z0 + z1) / 2);
+  }
+}
+
+// the white corridor that leaves the spine toward +x
+function buildCorridor() {
+  const { x0, x1, open, ceil } = CORRIDOR;
+  const len = x1 - x0;
+  wall(scene, len, CEIL, C.wall, (x0 + x1) / 2, 0, SPINE.z0, 0);
+  wall(scene, x1 - open, CEIL, C.wall, (open + x1) / 2, 0, SPINE.z1, 180);
+  wall(scene, SPINE.z1 - SPINE.z0, ceil, C.wall, x1, 0, (SPINE.z0 + SPINE.z1) / 2, -90);
+  // a room window in the left wall, a door and exit light at the far end
+  box(scene, 2.4, 1.0, 0.03, C.roomGlass, 6.4, 1.0, SPINE.z0 + 0.02);
+  box(scene, 0.05, 2.2, 0.95, "#3c6a62", x1 - 0.03, 0, -0.55);
+  box(scene, 0.05, 0.14, 0.38, "#55c27a", x1 - 0.03, 2.45, -0.55);
+  cyl(scene, 0.07, 0.07, 0.5, 8, C.red, 4.95, 0.75, SPINE.z0 + 0.1);
+  // lower white ceiling over the corridor
+  const lid = new THREE.Mesh(new THREE.PlaneGeometry(len, SPINE.z1 - SPINE.z0), mat(C.wall, LIT));
+  lid.rotation.x = Math.PI / 2;
+  lid.position.set((x0 + x1) / 2, ceil, (SPINE.z0 + SPINE.z1) / 2);
+  roof.add(lid);
+  wall(roof, len, CEIL - ceil, C.wall, (x0 + x1) / 2, ceil, SPINE.z1, 180);
+
+  // past the east boards: the next studio, closed off at x = 9.5
+  wall(scene, MODEL.z1 - SPINE.z1, CEIL, C.wall, open, 0, (SPINE.z1 + MODEL.z1) / 2, -90);
+  // the opposite studio's end wall, with the model shelves against it
+  wall(scene, SPINE.z0 - MODEL.z0, CEIL, C.wall, 4.5, 0, (MODEL.z0 + SPINE.z0) / 2, -90);
+}
+
+// the opposite studio, seen past the display boards: its far board line, a bench, a chair
+function buildOppositeStudio() {
+  const z = MODEL.z0 + 0.3;
+  box(layers.boards, 6.4, BOARD.top - 0.9, 0.03, C.board, 1.2, 0.9, z);
+  posters(layers.boards, "z", z + 0.015, 1, -1.9, 4.3, 1.0, 2.0, 30, [C.white, C.white, "#f1ead9", C.teal, C.pink], [0.2, 0.28]);
+  bench(layers.furniture, -0.6, 0.6, -4.6, -3.85);
+  officeChair(layers.furniture, 2.1, -4.7);
+}
+
+// the EXIT aisle toward -x: bins by the column, glass-walled rooms along one side
+function buildAisle() {
+  const F = layers.furniture;
+  for (const [x, color] of [[-4.35, "#2f63b8"], [-4.85, "#3e8a4f"], [-5.3, "#2f63b8"]]) {
+    box(F, 0.44, 0.92, 0.3, color, x, 0, -1.15);
+  }
+  const roomGlass = new THREE.MeshStandardMaterial({
+    color: C.roomGlass,
+    transparent: true,
+    opacity: 0.35,
+    roughness: 0.1,
+    depthWrite: false,
+  });
+  materials.set("room glass", roomGlass);
+  const len = AISLE.glassFrom - AISLE.x1;
+  const pane = new THREE.Mesh(new THREE.PlaneGeometry(len, 3.0), roomGlass);
+  pane.position.set((AISLE.glassFrom + AISLE.x1) / 2, 1.5, AISLE.glassZ);
+  scene.add(pane);
+  const frames = batch();
+  for (let x = AISLE.glassFrom; x >= AISLE.x1 - 0.01; x -= 1.5) frames.box(0.06, 3.0, 0.08, "#3a3d40", x, 0, AISLE.glassZ);
+  for (const y of [0, 1.0, 2.95]) frames.box(len, 0.06, 0.08, "#3a3d40", (AISLE.glassFrom + AISLE.x1) / 2, y, AISLE.glassZ);
+  frames.box(len, CEIL - 3.0, 0.15, C.wall, (AISLE.glassFrom + AISLE.x1) / 2, 3.0, AISLE.glassZ - 0.05);
+  frames.addTo(shell);
+  for (const x of [-7.2, -10.4, -13.6, -16.6]) shelves(F, x, AISLE.glassZ - 0.5, 0, 1.4, 1.9, 0.4);
+
+  // the next studio bay across the aisle: its hanging boards and a couple of benches
+  box(layers.boards, 0.05, BOARD.top - BOARD.bottom, BAY.z1 - 0.5 - SPINE.z1, C.board, -12.25, BOARD.bottom, (SPINE.z1 + 0.25 + BAY.z1) / 2);
+  bench(F, -7.4, -6.2, 1.3, 2.05);
+  bench(F, -9.4, -8.2, 3.4, 4.15);
+  // cardboard standing under the end of the west boards, seen down the aisle
+  slab(layers.cardboard, [-4.15, 0.35], [-4.15, 1.0], 0.0, 0.95, C.cardboard);
+  // shelf by the aisle column, and the rolling whiteboard with the class list beside it
+  shelves(F, -3.91, -1.94, 90, 0.64, 1.65, 0.45);
+  const names = new THREE.Mesh(new THREE.BoxGeometry(0.03, 1.05, 1.2), mat(C.white));
+  names.position.set(-3.42, 1.32, -2.7);
+  layers.boards.add(names);
+  posters(layers.boards, "x", -3.42, 1, -3.25, -2.15, 1.0, 1.75, 12, ["#3a4150"], [0.12, 0.02]);
+  for (const zz of [-2.15, -3.25]) box(layers.boards, 0.55, 0.04, 0.04, C.frame, -3.42, 0.02, zz);
+  standingPerson(layers.people, -15.3, -0.25, 90, "#3a3640", "#2c2f38");
+}
+
+// ceiling: timber deck and joists, a beam, the steel grid, a skylight over the spine
+function buildCeiling() {
+  const w = MODEL.x1 - MODEL.x0;
+  const mid = (MODEL.x0 + MODEL.x1) / 2;
+  for (const [z0, z1] of [[SPINE.z1, MODEL.z1], [MODEL.z0, SPINE.z0]]) {
+    const deck = new THREE.Mesh(new THREE.PlaneGeometry(w, z1 - z0), mat(C.ceiling, LIT));
+    deck.rotation.x = Math.PI / 2;
+    deck.position.set(mid, CEIL, (z0 + z1) / 2);
+    roof.add(deck);
+  }
+  // skylight ridge over the spine, out to the end of the aisle
+  const sky = new THREE.MeshBasicMaterial({ color: "#fbfaf4", side: THREE.DoubleSide });
+  const sx0 = AISLE.x1;
+  const sx1 = CORRIDOR.x0;
+  const half = (SPINE.z1 - SPINE.z0) / 2;
+  for (const s of [-1, 1]) {
+    const pane = new THREE.Mesh(new THREE.PlaneGeometry(sx1 - sx0, Math.hypot(half, 0.7)), sky);
+    pane.position.set((sx0 + sx1) / 2, CEIL + 0.35, (SPINE.z0 + SPINE.z1) / 2 + (s * half) / 2);
+    pane.rotation.x = Math.PI / 2 - s * Math.atan2(0.7, half);
+    roof.add(pane);
+  }
+
+  const timber = batch();
+  timber.box(w, 0.55, 0.2, C.joist, mid, CEIL - 0.55, 2.55);
+  for (let x = MODEL.x0 + 0.6; x < MODEL.x1; x += 1.2) {
+    timber.box(0.07, 0.25, BAY.z1 - SPINE.z1, C.joist, x, CEIL - 0.25, (SPINE.z1 + BAY.z1) / 2);
+  }
+  timber.addTo(roof);
+
+  // steel grid at 2.5 m; rails at 2.1 m along the board lines
+  const steel = batch();
+  for (const z of [0.85, 2.55, 4.7, 6.85]) steel.box(BAY.x1 - BAY.x0, 0.05, 0.05, C.steel, 0, GRID, z);
+  for (const x of [-2.7, 0, 2.7]) steel.box(0.05, 0.05, 6.0, C.steel, x, GRID, 3.85);
+  for (const x of [BAY.x0 + 0.04, BAY.x1 - 0.12]) steel.box(0.06, 0.06, BAY.z1 - 0.4, C.steel, x, BOARD.rail, (0.4 + BAY.z1) / 2);
+  steel.box(3.25, 0.06, 0.06, C.steel, 0.8, BOARD.rail, -1.17);
+  for (const [x, z] of [[2.15, -1.15], [3.92, 0.6], [-4.1, 0.4], [-0.8, -1.17]]) steel.box(0.05, GRID, 0.05, C.steel, x, 0, z);
+  // LED light bars
+  for (const z of [1.7, 3.6, 5.6]) steel.box(7.0, 0.04, 0.06, "#fffdf4", 0, GRID - 0.06, z);
+  steel.addTo(layers.ceiling);
+}
+
+/* ==================================================================
+   BOARDS: hanging tack boards, display boards, whiteboard, black board
+================================================================== */
+
+// the whiteboard in the photos: a big hand-drawn ring of writing
+function whiteboardTexture() {
+  const cv = document.createElement("canvas");
+  cv.width = 1024;
+  cv.height = 680;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#fbfbf7";
+  g.fillRect(0, 0, cv.width, cv.height);
+  g.strokeStyle = "#27303b";
+  for (let ring = 0; ring < 5; ring++) {
+    g.lineWidth = 2 + (ring % 2) * 2;
+    g.beginPath();
+    g.ellipse(470, 350, 250 + ring * 16, 270 + ring * 14, -0.15, 0, Math.PI * 2);
+    g.stroke();
+  }
+  g.fillStyle = "#27303b";
+  for (let a = 0; a < Math.PI * 2; a += 0.045) {
+    const r = 310 + Math.sin(a * 7) * 8;
+    g.fillRect(470 + Math.cos(a) * r * 0.9, 350 + Math.sin(a) * r, 10, 3);
+  }
+  g.fillStyle = "#e5508a";
+  g.beginPath();
+  g.arc(960, 80, 16, 0, Math.PI * 2);
+  g.fill();
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function buildBoards() {
+  const B = layers.boards;
+  const paper = [C.white, C.white, C.white, "#f1ead9", "#e5dccb", C.teal, "#f3d36b", C.pink, "#9bc3f0", "#2d2d2f"];
+  const notes = [C.teal, "#f3d36b", "#d8f05a", C.pink];
+
+  // the two lines of hanging tack boards along the bay, 1.0 to 2.05 m up
+  const h = BOARD.top - BOARD.bottom;
+  const eastX = BAY.x1 - 0.15;
+  const westX = BAY.x0;
+  box(B, 0.03, h, BAY.z1 - 0.12 - 0.6, C.board, eastX, BOARD.bottom, (0.6 + BAY.z1 - 0.12) / 2);
+  box(B, 0.03, h, BAY.z1 - 0.12 - 0.4, C.board, westX, BOARD.bottom, (0.4 + BAY.z1 - 0.12) / 2);
+  // east: the pin-up collage in the middle, a few sheets elsewhere
+  posters(B, "x", eastX, -1, 3.4, 5.6, 1.1, 2.0, 46, paper, [0.18, 0.24]);
+  posters(B, "x", eastX, -1, 0.8, 3.3, 1.2, 1.9, 5, [C.white], [0.22, 0.3]);
+  posters(B, "x", eastX, -1, 5.8, 6.9, 1.1, 1.9, 8, paper, [0.2, 0.28]);
+  // west: project sheets, sticky notes and name tags
+  posters(B, "x", westX, 1, 0.6, 6.8, 1.15, 1.95, 30, paper, [0.21, 0.29]);
+  posters(B, "x", westX, 1, 1.0, 4.0, 1.5, 1.9, 24, notes, [0.07, 0.07]);
+
+  // display boards on the far side of the spine
+  // a plain sheet, then the "How do people sense time?" board, both facing the bay
+  slab(B, [-0.8, -1.21], [0.47, -1.21], 0.05, 2.05, C.cardboard, 0.02);
+  slab(B, [0.7, -1.21], [1.95, -1.21], 0.05, 2.05, C.cardboard, 0.02);
+  posters(B, "z", -1.21, 1, 0.75, 1.9, 0.85, 2.0, 6, [C.white], [0.4, 0.56]);
+  for (const x of [-0.6, 0.85, 1.75]) box(B, 0.06, 0.05, 0.5, C.black, x, 0, -1.21);
+  // "Farming in Cities": tall board facing +x, posters up top, a photo collage with
+  // URBAN / SMALL / LARGE / RURAL below, on two black feet
+  slab(B, [-1.63, -1.25], [-1.63, -2.47], 0.6, 2.48, C.cardboard, 0.02);
+  posters(B, "x", -1.63, 1, -2.42, -1.3, 1.5, 2.25, 4, [C.white], [0.4, 0.55]);
+  posters(B, "x", -1.63, 1, -2.35, -1.35, 0.75, 1.4, 16, ["#6f8f6a", "#8aa0b8", "#a58d6c", C.white], [0.12, 0.1]);
+  for (const z of [-1.3, -2.4]) {
+    box(B, 0.5, 0.05, 0.06, C.black, -1.63, 0, z);
+    box(B, 0.05, 0.6, 0.06, C.black, -1.63, 0, z);
+  }
+
+  // the ring whiteboard on its rolling stand: board in the plane x = -1.5
+  const wb = { x: -1.5, z0: 0.79, z1: 1.92, y0: 0.72, y1: 1.47 };
+  const front = new THREE.MeshStandardMaterial({ map: whiteboardTexture(), roughness: 0.4 });
+  materials.set("whiteboard", front);
+  const side = mat(C.steel);
+  const board = addMesh(
+    B,
+    new THREE.BoxGeometry(0.03, wb.y1 - wb.y0, wb.z1 - wb.z0),
+    [front, side, side, side, side, side],
+    wb.x,
+    (wb.y0 + wb.y1) / 2,
+    (wb.z0 + wb.z1) / 2,
+  );
+  board.castShadow = true;
+  const stand = batch();
+  for (const z of [wb.z0 + 0.05, wb.z1 - 0.05]) {
+    stand.box(0.04, wb.y1 + 0.1, 0.04, C.frame, wb.x - 0.04, 0.06, z);
+    stand.box(0.62, 0.05, 0.06, C.frame, wb.x - 0.04, 0.03, z);
+  }
+  stand.box(0.04, 0.04, wb.z1 - wb.z0, C.frame, wb.x - 0.04, 0.35, (wb.z0 + wb.z1) / 2);
+  stand.addTo(B, true);
+
+  // the black foam pin-board (4 x 8 ft) on its stand, in the plane z = 0.95
+  const bb = { z: 0.95, x0: -3.9, x1: -1.72, y0: 0.05, y1: 1.35 };
+  box(B, bb.x1 - bb.x0, bb.y1 - bb.y0, 0.025, C.black, (bb.x0 + bb.x1) / 2, bb.y0, bb.z);
+  box(B, 0.12, 0.1, 0.004, "#d8f05a", bb.x1 - 0.2, 1.15, bb.z - 0.015);
+  for (const x of [bb.x0 + 0.15, bb.x1 - 0.15]) {
+    box(B, 0.04, 1.2, 0.04, C.frame, x, 0.05, bb.z + 0.05);
+    box(B, 0.06, 0.05, 0.6, C.frame, x, 0.02, bb.z + 0.05);
+  }
+}
+
+/* ==================================================================
+   CARDBOARD: dividers, cubicle walls, boxes
+================================================================== */
+
+function buildCardboard() {
+  const K = layers.cardboard;
+  // dividers on the front edge of the first bench row
+  slab(K, [0.78, 0.8], [1.45, 0.8], 0.0, 1.3, C.cardboard);
+  slab(K, [2.2, 0.88], [3.35, 0.88], 0.0, 1.2, C.cardboard);
+  // the rocket print and the purple clamps on the first one
+  const rocket = batch();
+  rocket.box(0.42, 0.3, 0.004, "#7fa4cf", 1.1, 0.93, 0.79);
+  rocket.box(0.38, 0.12, 0.003, "#e4e0dc", 1.1, 1.0, 0.786);
+  for (const x of [0.88, 1.38]) rocket.box(0.09, 0.07, 0.05, "#a678d8", x, TOP - 0.06, 0.8);
+  rocket.addTo(K);
+
+  // the sheet standing behind the first row
+  slab(K, [0.08, 2.47], [1.78, 2.72], 0.0, 1.14, C.cardboard);
+  // the cubicle wall across the middle of the bay, folded at -1.24, and its L toward the windows
+  slab(K, [1.11, 4.24], [-0.41, 4.22], 0.0, 1.15, C.cardboard);
+  slab(K, [-0.41, 4.22], [-1.24, 4.16], 0.0, 1.15, C.cardboardDark);
+  slab(K, [-1.24, 4.16], [-1.72, 4.07], 0.0, 1.12, C.cardboard);
+  slab(K, [0.29, 4.32], [1.04, 4.32], 0.0, 1.29, C.cardboardDark);
+  slab(K, [-0.4, 4.22], [-0.4, 5.45], 0.0, 1.15, C.cardboard);
+
+  // the big open box behind the whiteboard, flaps up, a robot rig inside
+  const bx = { x1: -1.58, x0: -2.5, z0: 2.5, z1: 3.74, h: 0.98 };
+  const g = new THREE.Group();
+  K.add(g);
+  box(g, bx.x1 - bx.x0, bx.h, bx.z1 - bx.z0, C.cardboard, (bx.x0 + bx.x1) / 2, 0, (bx.z0 + bx.z1) / 2);
+  for (const [axis, at] of [["x", bx.x1], ["x", bx.x0], ["z", bx.z0], ["z", bx.z1]]) {
+    const flap = axis === "x"
+      ? box(g, 0.012, 0.36, bx.z1 - bx.z0 - 0.04, C.cardboardDark, at, bx.h, (bx.z0 + bx.z1) / 2)
+      : box(g, bx.x1 - bx.x0 - 0.04, 0.36, 0.012, C.cardboardDark, (bx.x0 + bx.x1) / 2, bx.h, at);
+    if (axis === "x") flap.rotation.z = (at === bx.x1 ? -1 : 1) * 0.35;
+    else flap.rotation.x = (at === bx.z1 ? -1 : 1) * 0.35;
+  }
+  const rig = batch();
+  for (const z of [2.85, 3.4]) rig.box(0.04, 0.6, 0.04, "#d6dadd", -2.0, bx.h - 0.3, z);
+  rig.box(0.04, 0.04, 0.6, "#d6dadd", -2.0, bx.h + 0.28, 3.12);
+  rig.box(0.12, 0.1, 0.12, C.white, -2.0, bx.h + 0.2, 3.12);
+  rig.addTo(g);
+}
+
+/* ==================================================================
+   FURNITURE
+================================================================== */
+
+function buildFurniture() {
+  const F = layers.furniture;
+
+  // first bench row along the spine
+  bench(F, 0.22, 1.0, 0.85, 1.6);
+  bench(F, 1.0, 2.2, 0.85, 1.6);
+  bench(F, 2.2, 3.4, 0.85, 1.6);
+  const items = batch();
+  // drawings with green, blue and purple panels; keyboard
+  items.box(0.48, 0.01, 0.52, C.white, 0.5, TOP, 1.17);
+  items.box(0.14, 0.012, 0.09, C.lime, 0.36, TOP + 0.01, 1.05);
+  items.box(0.14, 0.012, 0.09, C.lime, 0.58, TOP + 0.01, 1.05);
+  items.box(0.16, 0.012, 0.12, "#7fa8e0", 0.42, TOP + 0.01, 1.3);
+  items.box(0.05, 0.014, 0.12, "#b07fe0", 0.5, TOP + 0.012, 1.3);
+  items.box(0.14, 0.03, 0.4, C.black, 0.88, TOP, 1.12);
+  // paper bag, clear bin with a grey bag on top, toolbox, power strip
+  items.box(0.3, 0.38, 0.17, "#c9b48a", 0.72, TOP, 1.38);
+  items.box(0.58, 0.3, 0.42, "#e1e8ec", 1.2, TOP, 1.22);
+  items.box(0.48, 0.12, 0.3, "#8f8f94", 1.15, TOP + 0.3, 1.22);
+  items.box(0.38, 0.2, 0.24, C.black, 2.7, TOP, 1.15);
+  items.box(0.38, 0.06, 0.24, C.yellow, 2.7, TOP + 0.14, 1.15);
+  items.box(0.28, 0.04, 0.06, C.white, 1.9, TOP, 1.05);
+  items.addTo(F, true);
+  stool(F, 0.75, 1.85);
+  stool(F, 1.95, 1.95);
+  chair(F, 1.45, 2.1, 160);
+
+  // benches behind the sheet: the 3D-printer bench and its neighbours
+  bench(F, 1.2, 2.6, 2.78, 3.53);
+  bench(F, 1.2, 2.6, 3.53, 4.18);
+  bench(F, 2.6, 3.85, 2.78, 3.53);
+  printer3d(F, 2.15, TOP, 2.98);
+  const more = batch();
+  more.box(0.22, 0.22, 0.22, C.red, 3.3, TOP, 3.0);
+  more.box(0.35, 0.18, 0.25, "#7f8487", 1.6, TOP, 3.15);
+  more.box(0.3, 0.42, 0.02, C.white, 1.45, TOP, 3.75);
+  more.box(0.2, 0.5, 0.2, "#d8c7a8", 2.4, TOP, 3.55);
+  more.box(0.4, 0.06, 0.3, "#c79b6e", 2.0, TOP, 3.9);
+  more.addTo(F, true);
+  stool(F, 3.0, 2.45);
+
+  // white counter under the windows, with screens and odds and ends
+  const counter = { z0: BAY.z1 - 0.66, x0: BAY.x0 + 0.17, x1: BAY.x1 - 0.17, top: 0.93 };
+  box(F, counter.x1 - counter.x0, counter.top, BAY.z1 - 0.02 - counter.z0, C.white, (counter.x0 + counter.x1) / 2, 0, (counter.z0 + BAY.z1 - 0.02) / 2);
+  monitor(F, -3.2, counter.top, 6.8, 180, "#d9dadc");
+  monitor(F, 2.3, counter.top, 6.8, 180, "#d9dadc");
+  monitor(F, 3.3, counter.top, 6.8, 180);
+  printer3d(F, -1.1, counter.top, 6.8);
+  const odds = batch();
+  const colors = [C.red, C.yellow, C.white, C.grey, "#f08a3c", C.lime, C.teal];
+  for (let x = counter.x0 + 0.3; x < counter.x1 - 0.3; x += 0.35 + rand() * 0.5) {
+    const hh = 0.08 + rand() * 0.3;
+    odds.box(0.1 + rand() * 0.15, hh, 0.12 + rand() * 0.15, colors[Math.floor(rand() * colors.length)], x, counter.top, 6.6 + rand() * 0.35);
+  }
+  odds.addTo(F, true);
+  stool(F, 0.05, 6.1);
+  stool(F, -2.1, 6.05);
+  chair(F, 1.1, 6.05, 180);
+  chair(F, -3.3, 6.0, 190);
+
+  // the bike parked by the cubicle wall
+  const bike = place(F, -0.47, 6.05, 90);
+  for (const x of [-0.5, 0.5]) {
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.02, 4, 14), mat(C.black));
+    wheel.position.set(x, 0.35, 0);
+    bike.add(wheel);
+  }
+  bar(bike, [-0.5, 0.35, 0], [0.1, 0.8, 0], 0.03, "#3b4a5a");
+  bar(bike, [0.5, 0.35, 0], [0.1, 0.8, 0], 0.03, "#3b4a5a");
+  bar(bike, [0.1, 0.8, 0], [0.45, 0.85, 0], 0.03, "#3b4a5a");
+
+  // fibre drum under the end of the east boards
+  cyl(F, 0.27, 0.27, 0.95, 12, "#cfa772", 4.32, 0, 0.86);
+  cyl(F, 0.28, 0.28, 0.03, 12, C.steel, 4.32, 0.93, 0.86);
+
+  // model shelves behind the corridor-side column
+  shelves(F, 4.3, -2.18, -90, 1.07, 2.0, 0.36);
+  // the next studio past the east boards: a white table with two chairs
+  const t = new THREE.Group();
+  F.add(t);
+  box(t, 1.6, 0.04, 0.8, C.white, 7.9, 0.72, 1.35);
+  for (const [x, z] of [[7.15, 1.0], [8.65, 1.0], [7.15, 1.7], [8.65, 1.7]]) box(t, 0.04, 0.72, 0.04, C.grey, x, 0, z);
+  chair(F, 7.4, 1.95, 180);
+  chair(F, 8.4, 1.95, 180);
+}
+
+function buildHanging() {
+  // yellow cord reels on the 2.5 m grid, measured centres
+  for (const [x, y, z, drop] of [[0.17, 2.3, 1.4, 1.3], [2.7, 2.3, 2.8, 1.2], [2.6, 2.3, 4.47, 1.25], [2.75, 2.3, 4.45, 1.3], [-2.35, 2.29, 4.29, 1.3], [-0.2, 2.3, 3.6, 1.25]]) {
+    cordReel(x, y, z, 90, drop);
+  }
+  // triangulated centre of the shade: (-2.38, 1.79, 1.23)
+  pendantLamp(-2.38, 1.7, 1.23);
+  exitSign(-4.19, 2.25, -0.18);
 }
 
 function buildLights() {
   scene.add(new THREE.HemisphereLight("#fff9ee", "#7d7465", 1.9));
-
-  const sun = new THREE.DirectionalLight("#fff1d9", 2.4);
-  sun.position.set(5, 16, -26);
-  sun.target.position.set(2, 0, -3);
+  // daylight through the windows, low from beyond the window wall
+  const sun = new THREE.DirectionalLight("#fff1d9", 2.2);
+  sun.position.set(6, 14, 26);
+  sun.target.position.set(0, 0, 2);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.camera.left = -18;
-  sun.shadow.camera.right = 18;
-  sun.shadow.camera.top = 18;
-  sun.shadow.camera.bottom = -18;
-  sun.shadow.camera.far = 70;
+  sun.shadow.camera.left = -14;
+  sun.shadow.camera.right = 14;
+  sun.shadow.camera.top = 14;
+  sun.shadow.camera.bottom = -14;
+  sun.shadow.camera.far = 60;
   sun.shadow.bias = -0.0005;
   scene.add(sun, sun.target);
-
   const fill = new THREE.DirectionalLight("#e4ecff", 0.8);
-  fill.position.set(-8, 10, 12);
+  fill.position.set(-8, 10, -12);
   scene.add(fill);
 }
 
-// where the phone pointed: yaw turns right, pitch tilts down (degrees)
-function aim(pos, yaw, pitch) {
-  const y = THREE.MathUtils.degToRad(yaw);
-  const p = THREE.MathUtils.degToRad(pitch);
-  return [
-    pos[0] + Math.sin(y) * Math.cos(p) * 10,
-    pos[1] - Math.sin(p) * 10,
-    pos[2] - Math.cos(y) * Math.cos(p) * 10,
-  ];
-}
+/* ==================================================================
+   VIEWS
+================================================================== */
 
-// iPhone 16 Pro main camera: 24 mm equiv., 4:3 photos
-const IPHONE = { fov: 56.8, aspect: 4 / 3 };
-const WINDOWS = [0.75, 1.5, -2.7];
-const AISLE_CAM = [1.2, 1.5, -1.9];
+// iPhone 16 Pro main camera as solved: 24 mm equiv., 4:3, vertical fov 55.9°
+const IPHONE = { fov: 55.87, aspect: 4 / 3 };
 
 export default {
   title: "ID Studio",
@@ -710,11 +752,28 @@ export default {
     { key: "ceiling", label: "Ceiling" },
     { key: "people", label: "People" },
   ],
+  // photo views use the camera poses solved for those photos
   views: {
-    windows: { label: "Windows", pos: WINDOWS, target: aim(WINDOWS, 0, 8), photo: { ...IPHONE, name: "IMG_4716", src: "photos/id_studio_windows.jpg" } },
-    aisle: { label: "Aisle", pos: AISLE_CAM, target: aim(AISLE_CAM, 91.6, 7), photo: { ...IPHONE, name: "IMG_4722", src: "photos/id_studio_aisle.jpg" } },
-    overview: { label: "Overview", pos: [-11, 11, 7], target: [1.5, 0.5, -5.5], fov: 45 },
-    plan: { label: "Plan", pos: [1.5, 34, -7.49], target: [1.5, 0, -7.5], fov: 45 },
+    windows: {
+      label: "Windows",
+      pos: [0.076, 1.563, -0.619],
+      target: [-0.8, 0.314, 9.264],
+      photo: { ...IPHONE, name: "IMG_4716", src: "photos/id_studio_windows.jpg" },
+    },
+    corridor: {
+      label: "Corridor",
+      pos: [0.075, 1.564, -0.03],
+      target: [9.996, 0.334, 0.191],
+      photo: { ...IPHONE, name: "IMG_4718", src: "photos/id_studio_corridor.jpg" },
+    },
+    aisle: {
+      label: "Aisle",
+      pos: [-0.225, 1.544, -0.054],
+      target: [-10.097, 0.008, -0.482],
+      photo: { ...IPHONE, name: "IMG_4722", src: "photos/id_studio_aisle.jpg" },
+    },
+    overview: { label: "Overview", pos: [9.5, 11.5, -9.5], target: [-0.2, 0.4, 2.8], fov: 45 },
+    plan: { label: "Plan", pos: [0.4, 30, 0.81], target: [0.4, 0, 0.8], fov: 45 },
   },
 
   build() {
@@ -722,24 +781,28 @@ export default {
     scene = new THREE.Scene();
     layers = makeLayers(scene, this.layers);
     roof = new THREE.Group();
-    grid = new THREE.Group();
     shell = new THREE.Group();
-    layers.ceiling.add(roof, grid);
+    layers.ceiling.add(roof);
     scene.add(shell);
 
     buildLights();
     buildFloor();
-    buildWalls();
+    buildWindowWall();
+    buildColumns();
+    buildCorridor();
+    buildOppositeStudio();
     buildAisle();
     buildCeiling();
-    buildStudio();
-    buildHangingStuff();
-    for (const part of [roof, grid, shell]) part.traverse((obj) => (obj.castShadow = false));
+    buildBoards();
+    buildCardboard();
+    buildFurniture();
+    buildHanging();
+    for (const part of [roof, shell]) part.traverse((obj) => (obj.castShadow = false));
     return scene;
   },
 
   // called every frame with the camera
   update(camera) {
-    roof.visible = camera.position.y < ROOM.height - 0.2;
+    roof.visible = camera.position.y < CEIL - 0.1;
   },
 };

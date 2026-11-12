@@ -51,7 +51,6 @@ const C = {
   carGlass: "#2b333b",
   tyre: "#1f1f21",
   rack: "#2f8a4a",
-  orange: "#e5602c",
   yellow: "#e2bd45",
   white: "#f4f4f1",
   black: "#26272a",
@@ -361,11 +360,81 @@ function buildStreet() {
   // someone heading for the door
   standingPerson(layers.people, -1.3, 1.1, 35, "#2a2d33", "#3a3f4a").position.y = WALK.height;
 
-  // orange plastic barriers where the drone took off
-  for (let i = 0; i < 5; i++) {
-    const g = place(scene, -16 + i * 1.9, 15.6 + i * 0.12, -4);
-    taperedBox(g, 1.8, 0.8, 0.5, 1.6, 0.25, C.orange, 0, 0, 0);
+  buildCamp();
+}
+
+/* ==================================================================
+   CAMP: tents and a few people at the far side of the lot
+================================================================== */
+
+// low dome tent: a squashed few-sided half sphere with a dark door flap
+function domeTent(x, z, turn, color, size = 1) {
+  const g = place(layers.camp, x, z, turn);
+  const geo = new THREE.SphereGeometry(1.1, 7, 3, 0, Math.PI * 2, 0, Math.PI / 2);
+  const dome = addMesh(g, geo, mat(color), 0, 0, 0);
+  dome.scale.set(size, 0.95 * size, 0.8 * size);
+  const door = new THREE.Mesh(new THREE.CircleGeometry(0.38 * size, 5, 0, Math.PI), mat("#2b2a28", { side: THREE.DoubleSide }));
+  door.position.set(0, 0.02, 0.87 * size);
+  g.add(door);
+  // poles crossing over the top
+  bar(g, [-1.0 * size, 0, 0], [0, 1.05 * size, 0], 0.025, "#3a3a3a");
+  bar(g, [0, 1.05 * size, 0], [1.0 * size, 0, 0], 0.025, "#3a3a3a");
+  return g;
+}
+
+// tarp strung over a rope between two poles, pinned to the ground on one side
+function leanTo(x, z, turn, color) {
+  const g = place(layers.camp, x, z, turn);
+  bar(g, [-1.4, 0, 0], [-1.4, 1.5, 0], 0.05, "#5b4a3c");
+  bar(g, [1.4, 0, 0], [1.4, 1.5, 0], 0.05, "#5b4a3c");
+  const tarp = box(g, 2.9, 0.02, 1.9, color, 0, 0, 0);
+  tarp.position.set(0, 0.8, 0.75);
+  tarp.rotation.x = 0.9;
+  box(g, 1.6, 0.12, 0.8, "#6c6f78", 0, 0, 0.6); // a mattress underneath
+}
+
+// someone sitting on the ground or a crate, knees up
+function sittingFigure(x, z, turn, shirt, pants, onCrate = false) {
+  const g = place(layers.camp, x, z, turn);
+  const seat = onCrate ? 0.4 : 0.05;
+  if (onCrate) box(g, 0.45, 0.4, 0.4, "#2f5fb3", 0, 0, -0.05);
+  bar(g, [0.1, seat + 0.05, 0], [0.1, seat + 0.35, 0.35], 0.12, pants);
+  bar(g, [-0.1, seat + 0.05, 0], [-0.1, seat + 0.35, 0.35], 0.12, pants);
+  bar(g, [0.1, seat + 0.35, 0.35], [0.1, 0, 0.5], 0.11, pants);
+  bar(g, [-0.1, seat + 0.35, 0.35], [-0.1, 0, 0.5], 0.11, pants);
+  cyl(g, 0.17, 0.19, 0.55, 6, shirt, 0, seat, 0);
+  addMesh(g, new THREE.IcosahedronGeometry(0.11, 0), mat("#c89577"), 0, seat + 0.7, 0.02);
+  addMesh(g, new THREE.IcosahedronGeometry(0.12, 0), mat("#3d3a36"), 0, seat + 0.76, -0.01); // beanie
+  return g;
+}
+
+function buildCamp() {
+  const P = layers.camp;
+  // tents in a loose cluster where the lot meets the empty ground
+  domeTent(-15.5, 16.6, 10, "#3f6b8e");
+  domeTent(-12.4, 17.4, -15, "#6b7a3c", 1.1);
+  domeTent(-9.2, 16.2, 20, "#9a4a3b", 0.9);
+  domeTent(-5.6, 17.6, -5, "#4a4f57", 1.05);
+  leanTo(-18.8, 18.2, 5, "#2f6fb0");
+  // belongings: shopping cart, bags, crates, a folding chair
+  const cart = place(P, -10.8, 14.3, 30);
+  box(cart, 0.9, 0.5, 0.55, "#9aa0a3", 0, 0.45, 0);
+  for (const [sx, sz] of [[-0.4, -0.22], [0.4, -0.22], [-0.4, 0.22], [0.4, 0.22]]) {
+    bar(cart, [sx, 0.05, sz], [sx * 0.9, 0.45, sz * 0.9], 0.03, "#9aa0a3");
   }
+  box(cart, 0.7, 0.35, 0.45, "#2b2b2e", 0, 0.95, 0); // bags piled in it
+  for (const [x, z, w, h, c] of [[-14.0, 15.4, 0.6, 0.45, "#1f1f22"], [-13.6, 15.7, 0.5, 0.35, "#5a6b3a"], [-7.6, 15.6, 0.7, 0.5, "#2b3550"], [-4.3, 16.2, 0.5, 0.4, "#7a3b33"], [-17.6, 16.8, 0.8, 0.45, "#3a3a3a"]]) {
+    box(P, w, h, w * 0.7, c, x, 0, z);
+  }
+  box(P, 0.5, 0.35, 0.4, "#2f5fb3", -8.4, 0, 15.2);
+  box(P, 0.5, 0.35, 0.4, "#2f5fb3", -8.4, 0.35, 15.2);
+
+  // people
+  sittingFigure(-14.6, 15.0, 160, "#4b3b2f", "#2c3038");
+  sittingFigure(-11.6, 15.4, 200, "#2e4a3a", "#3a3f4a", true);
+  sittingFigure(-18.6, 17.4, 180, "#5d5550", "#2a2d33");
+  standingPerson(P, -9.9, 15.0, 150, "#6a2f2f", "#33363d");
+  standingPerson(P, -6.4, 15.3, 200, "#3a3a40", "#4d5a6e");
 }
 
 function buildLights() {
@@ -412,6 +481,7 @@ export default {
     { key: "trees", label: "Trees" },
     { key: "power", label: "Power lines" },
     { key: "people", label: "People" },
+    { key: "camp", label: "Tents" },
     { key: "roof", label: "Roof gear" },
   ],
   views: {

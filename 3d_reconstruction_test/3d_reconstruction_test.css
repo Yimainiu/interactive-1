@@ -298,6 +298,8 @@ label input {
   font-family: "Didot", "Bodoni 72", "Playfair Display", Georgia, "Times New Roman", serif;
   text-align: center;
   opacity: 0;
+  overflow: hidden;
+  isolation: isolate; /* keeps the photo (z-index -1) behind the type but above the page */
   transition: opacity 0.7s ease;
 }
 
@@ -312,6 +314,23 @@ label input {
 
 #slate[hidden] {
   display: none;
+}
+
+/* the next scene's photo behind the type: pale, grey, slowly pushing in */
+.slate-photo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: center / cover no-repeat;
+  filter: grayscale(0.85) contrast(0.9);
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 1.2s ease 0.2s, transform 4.5s ease-out;
+}
+
+#slate.show .slate-photo {
+  opacity: 0.32;
+  transform: scale(1.12);
 }
 
 .slate-rule {

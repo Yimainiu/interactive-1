@@ -289,6 +289,21 @@ async function enterPortal(portal, point) {
   slate.querySelector(".slate-number").textContent = portal.number;
   slate.querySelector(".slate-title").textContent = portal.title;
   slate.querySelector(".slate-line").textContent = portal.line || "";
+  // the next scene's photo, washed out behind the type; wait for it so it fades in with the card
+  const def = SCENES[portal.to];
+  const src = def.views[def.intro].photo?.src;
+  const bg = slate.querySelector(".slate-photo");
+  bg.style.backgroundImage = "";
+  if (src) {
+    const img = new Image();
+    img.src = src;
+    try {
+      await img.decode();
+      bg.style.backgroundImage = `url("${src}")`;
+    } catch {
+      // no photo: plain white card
+    }
+  }
 
   // a short dolly toward the door while the card fades in
   const dir = point.clone().sub(camera.position);
@@ -302,7 +317,6 @@ async function enterPortal(portal, point) {
   slate.classList.add("show");
   await wait(SLATE_IN + SLATE_HOLD);
 
-  const def = SCENES[portal.to];
   showScene(portal.to);
   goTo(def.intro, true);
   setModel(modelMode);

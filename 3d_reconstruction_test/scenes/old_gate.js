@@ -188,6 +188,15 @@ function buildBuilding() {
 
   parts.addTo(scene);
 
+  // invisible click target over the door: it leads into the ID Studio
+  const doorway = new THREE.Mesh(
+    new THREE.BoxGeometry(3.1, 2.95, 0.1),
+    new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }),
+  );
+  doorway.position.set(0, y0 + 1.475, -DOOR.depth + 0.1);
+  doorway.userData.portal = { to: "studio", number: "Scene Two", title: "ID Studio", line: "Through the old gate, into the studio." };
+  scene.add(doorway);
+
   // lamp in the bay ceiling, signs and boxes on the wall
   cyl(scene, 0.13, 0.13, 0.16, 8, C.coping, 0, y0 + DOOR.h - 0.16, -0.35);
   box(scene, 0.32, 0.4, 0.14, "#c4c5c1", -4.05, y0 + 0.75, 0.07);

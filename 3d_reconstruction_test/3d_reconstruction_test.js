@@ -273,6 +273,45 @@ controls.addEventListener("start", () => {
   current = null;
 });
 
+// ---------- doors: a title card, then the next scene ----------
+
+const slate = document.querySelector("#slate");
+const SLATE_IN = 700; // keep in sync with #slate's transition in the CSS
+const SLATE_HOLD = 2200;
+const SLATE_OUT = 1100;
+let crossing = false;
+
+// walk toward the door, cut to a white card with the scene's name, then open on the new scene
+async function enterPortal(portal, point) {
+  if (crossing) return;
+  crossing = true;
+  canvas.style.cursor = "";
+  slate.querySelector(".slate-number").textContent = portal.number;
+  slate.querySelector(".slate-title").textContent = portal.title;
+  slate.querySelector(".slate-line").textContent = portal.line || "";
+
+  // a short dolly toward the door while the card fades in
+  const dir = point.clone().sub(camera.position);
+  tween = {
+    start: performance.now(),
+    from: { pos: camera.position.clone(), target: controls.target.clone(), fov: camera.fov },
+    to: { pos: camera.position.clone().addScaledVector(dir, 0.6), target: point.clone(), fov: camera.fov },
+  };
+  slate.hidden = false;
+  slate.getBoundingClientRect(); // start the fade from transparent
+  slate.classList.add("show");
+  await wait(SLATE_IN + SLATE_HOLD);
+
+  const def = SCENES[portal.to];
+  showScene(portal.to);
+  goTo(def.intro, true);
+  setModel(modelMode);
+  slate.classList.remove("show");
+  await wait(SLATE_OUT);
+  slate.hidden = true;
+  crossing = false;
+}
+
 // ---------- clicking 3D-scanned objects ----------
 
 // a click is a press and release without dragging the view
@@ -281,13 +320,23 @@ canvas.addEventListener("pointerdown", (e) => (downAt = [e.clientX, e.clientY]))
 canvas.addEventListener("pointerup", (e) => {
   const moved = downAt ? Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) : 99;
   downAt = null;
-  if (moved > 5 || !active || intro || mode === "photo" || isOpen()) return;
-  const scan = pick(built[active], camera, e.clientX, e.clientY, canvas);
-  if (scan) openScan(scan);
+  if (moved > 5 || !active || intro || crossing || mode === "photo" || isOpen()) return;
+  const hit = pick(built[active], camera, e.clientX, e.clientY, canvas);
+  if (hit?.scan) openScan(hit.scan);
+  if (hit?.portal) enterPortal(hit.portal, hitPoint(e));
 });
+
+// the world point under the pointer, for the dolly toward a door
+const ray = new THREE.Raycaster();
+function hitPoint(e) {
+  const r = canvas.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+  const hits = ray.intersectObjects(built[active].children, true);
+  return hits.length ? hits[0].point : controls.target.clone();
+}
 // a pointing hand over anything that opens a scan
 canvas.addEventListener("pointermove", (e) => {
-  if (e.buttons || !active || e.pointerType !== "mouse") return;
+  if (e.buttons || !active || crossing || e.pointerType !== "mouse") return;
   canvas.style.cursor = pick(built[active], camera, e.clientX, e.clientY, canvas) ? "pointer" : "";
 });
 

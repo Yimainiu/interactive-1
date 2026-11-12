@@ -281,6 +281,86 @@ label input {
   opacity: 0.65;
 }
 
+/* ---------- scene title card ---------- */
+
+#slate {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  padding: 16px;
+  background: #fff;
+  color: #000;
+  font-family: "Didot", "Bodoni 72", "Playfair Display", Georgia, "Times New Roman", serif;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.7s ease;
+}
+
+#slate.show {
+  opacity: 1;
+}
+
+/* the slower fade-out opens on the new scene */
+#slate:not(.show) {
+  transition-duration: 1.1s;
+}
+
+#slate[hidden] {
+  display: none;
+}
+
+.slate-rule {
+  width: 0;
+  height: 1px;
+  background: #000;
+  transition: width 1.6s ease 0.4s;
+}
+
+#slate.show .slate-rule {
+  width: min(18rem, 60vw);
+}
+
+.slate-number {
+  margin: 0;
+  font-size: clamp(0.75rem, 1.6vw, 0.95rem);
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+}
+
+.slate-title {
+  margin: 0;
+  font-size: clamp(2.6rem, 8vw, 5.5rem);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  opacity: 0;
+  transform: translateY(0.3em);
+  transition: opacity 1s ease 0.5s, transform 1.4s ease 0.5s, letter-spacing 2.6s ease 0.5s;
+}
+
+#slate.show .slate-title {
+  opacity: 1;
+  transform: none;
+  letter-spacing: 0.12em;
+}
+
+.slate-line {
+  margin: 0;
+  font-size: clamp(0.85rem, 1.8vw, 1.05rem);
+  font-style: italic;
+  opacity: 0;
+  transition: opacity 1s ease 1.1s;
+}
+
+#slate.show .slate-line {
+  opacity: 1;
+}
+
 /* phones: keep the panels small so the model stays visible */
 @media (max-width: 600px) {
   #info,

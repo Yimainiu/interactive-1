@@ -163,7 +163,7 @@ export function pulseMarkers(scene, now) {
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
-// the scan under a screen point, or null
+// what can be clicked under a screen point: { scan } or { portal }, or null
 export function pick(scene, cam, clientX, clientY, canvas) {
   const r = canvas.getBoundingClientRect();
   pointer.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
@@ -171,10 +171,11 @@ export function pick(scene, cam, clientX, clientY, canvas) {
   for (const hit of raycaster.intersectObjects(scene.children, true)) {
     if (!hit.object.visible) continue;
     for (let o = hit.object; o; o = o.parent) {
-      if (o.userData.scanOwner) return o.userData.scanOwner.userData.scan;
-      if (o.userData.scan) return o.userData.scan;
+      if (o.userData.scanOwner) return { scan: o.userData.scanOwner.userData.scan };
+      if (o.userData.scan) return { scan: o.userData.scan };
+      if (o.userData.portal) return { portal: o.userData.portal };
     }
-    // the first visible thing hit is not a scan: something is in front of it
+    // the first visible thing hit is not clickable: something is in front of it
     if (!hit.object.isSprite) return null;
   }
   return null;

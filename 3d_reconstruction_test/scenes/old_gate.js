@@ -54,6 +54,7 @@ const C = {
   orange: "#e5602c",
   yellow: "#e2bd45",
   white: "#f4f4f1",
+  black: "#26272a",
 };
 
 const SITE = { left: -34, right: 34, back: -26, front: 22 };
@@ -192,8 +193,12 @@ function buildBuilding() {
   cyl(scene, 0.13, 0.13, 0.16, 8, C.coping, 0, y0 + DOOR.h - 0.16, -0.35);
   box(scene, 0.32, 0.4, 0.14, "#c4c5c1", -4.05, y0 + 0.75, 0.07);
   box(scene, 0.28, 0.22, 0.02, C.white, -4.7, y0 + 1.05, 0.01);
-  box(scene, 0.13, 0.18, 0.02, "#2f5fb3", -1.95, y0 + 1.05, 0.01);
-  cyl(scene, 0.07, 0.07, 0.9, 8, C.white, 1.95, y0, 0.15);
+  // access control right of the door: card reader, push-button post, camera box
+  box(scene, 0.09, 0.14, 0.03, C.black, 1.8, y0 + 1.22, 0.015); // card reader
+  box(scene, 0.13, 0.06, 0.02, "#2f5fb3", 1.8, y0 + 1.1, 0.01); // "activate switch" label
+  box(scene, 0.13, 1.08, 0.1, C.white, 1.8, y0, 0.05); // accessible push-button post
+  box(scene, 0.04, 0.06, 0.004, "#2f5fb3", 1.8, y0 + 0.55, 0.101); // wheelchair sign
+  box(scene, 0.12, 0.16, 0.1, C.black, 1.8, y0 + 1.95, 0.05); // camera box
 }
 
 /* ==================================================================

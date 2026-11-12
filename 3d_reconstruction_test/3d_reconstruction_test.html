@@ -27,12 +27,26 @@
       <span id="photo-label"></span>
     </div>
 
+    <!-- pop-up for 3D-scanned objects: click a marked object in the scene -->
+    <div id="viewer" hidden>
+      <div class="viewer-box" role="dialog" aria-labelledby="viewer-title">
+        <button id="viewer-close" aria-label="Close">×</button>
+        <canvas id="viewer-canvas"></canvas>
+        <span id="viewer-status"></span>
+        <div class="viewer-text">
+          <h2 id="viewer-title"></h2>
+          <p id="viewer-note"></p>
+          <p class="viewer-hint">Drag to turn · scroll to zoom · Esc to close</p>
+        </div>
+      </div>
+    </div>
+
     <header id="info">
       <a id="home" href="../index.html">Home</a>
       <h1>3D Reconstruction Test</h1>
       <p>
         Low-poly guesses at places around school, rebuilt with three.js from
-        photos and drone footage.
+        photos and drone footage. Click a glowing dot to see a 3D scan.
       </p>
     </header>
 

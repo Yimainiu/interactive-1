@@ -4,6 +4,7 @@ import { materials } from "./scenes/lowpoly.js";
 import oldGate from "./scenes/old_gate.js";
 import idStudio from "./scenes/id_studio.js";
 import mainGate from "./scenes/main_gate.js";
+import { addMarkers, pulseMarkers, pick, openScan, isOpen, renderViewer } from "./scans.js";
 
 /* ------------------------------------------------------------------
    3D Reconstruction Test
@@ -185,6 +186,7 @@ function showScene(key) {
   if (!built[key]) {
     built[key] = def.build();
     built[key].background = new THREE.Color("#f6eee9");
+    addMarkers(built[key]);
     materials.forEach((m) => (m.wireframe = modelMode === "wire"));
   }
   active = key;
@@ -271,6 +273,24 @@ controls.addEventListener("start", () => {
   current = null;
 });
 
+// ---------- clicking 3D-scanned objects ----------
+
+// a click is a press and release without dragging the view
+let downAt = null;
+canvas.addEventListener("pointerdown", (e) => (downAt = [e.clientX, e.clientY]));
+canvas.addEventListener("pointerup", (e) => {
+  const moved = downAt ? Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) : 99;
+  downAt = null;
+  if (moved > 5 || !active || intro || mode === "photo" || isOpen()) return;
+  const scan = pick(built[active], camera, e.clientX, e.clientY, canvas);
+  if (scan) openScan(scan);
+});
+// a pointing hand over anything that opens a scan
+canvas.addEventListener("pointermove", (e) => {
+  if (e.buttons || !active || e.pointerType !== "mouse") return;
+  canvas.style.cursor = pick(built[active], camera, e.clientX, e.clientY, canvas) ? "pointer" : "";
+});
+
 function resize() {
   const w = window.innerWidth;
   const h = window.innerHeight;
@@ -297,5 +317,8 @@ renderer.setAnimationLoop((now) => {
   updateTween(now);
   controls.update();
   SCENES[active].update?.(camera);
+  pulseMarkers(built[active], now);
+  controls.enabled = !isOpen();
   renderer.render(built[active], camera);
+  renderViewer(now);
 });

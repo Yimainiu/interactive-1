@@ -190,7 +190,7 @@ export function standingPerson(parent, x, z, turnDeg, shirt = "#2f3440", pants =
 
 // shared by every material that has been made dissolvable. amount runs 0 -> 1:
 // at 0 nothing is cut; at 1 everything is gone. Small cells of the world vanish
-// at random, far from `from` first, so the scene falls away toward that point
+// at random, nearest `from` first, so the scene breaks apart outward from that point
 export const dissolve = {
   amount: { value: 0 },
   from: { value: new THREE.Vector3() },
@@ -216,8 +216,8 @@ varying vec3 vDissolvePos;
 void main() {
   if (uDissolve > 0.0) {
     float noise = fract(sin(dot(floor(vDissolvePos / 0.35), vec3(12.9898, 78.233, 45.164))) * 43758.5453);
-    float near = 1.0 - clamp(distance(vDissolvePos.xz, uDissolveFrom.xz) / uDissolveRadius, 0.0, 1.0);
-    if (noise * 0.3 + near * 0.7 < uDissolve) discard;
+    float far = clamp(distance(vDissolvePos.xz, uDissolveFrom.xz) / uDissolveRadius, 0.0, 1.0);
+    if (noise * 0.3 + far * 0.7 < uDissolve) discard;
   }`,
     );
   };

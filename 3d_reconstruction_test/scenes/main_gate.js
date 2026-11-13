@@ -296,11 +296,6 @@ function buildPlaza() {
   for (let z = z0 + 4; z < z1; z += 9) rail.box(0.5, 1.0, 1.4, C.concrete, x0 + 0.25, y, z);
   rail.addTo(scene, true);
 
-  // tall black light poles on the plaza edge, with clusters of lamp heads
-  for (const z of [-10, 2.5, 12.5, 27]) {
-    cyl(layers.lamps, 0.08, 0.11, 9.8 - y, 6, C.black, 12.9, y, z);
-    for (let i = 0; i < 4; i++) cyl(layers.lamps, 0.14, 0.14, 0.3, 8, C.black, 12.9 + (i % 2 ? 0.25 : -0.25), 8.4 + i * 0.35, z);
-  }
   // banners standing on the plaza
   for (const [x, z] of [[18, -4], [24, -4], [30, -4], [36, -4]]) flag(x, y, z);
 }
@@ -376,7 +371,7 @@ function buildNeighbours() {
 }
 
 /* ==================================================================
-   COURTYARD: bed, trees, hedge, fence, lamps, signs
+   COURTYARD: bed, trees, hedge, fence, signs
 ================================================================== */
 
 // a raised bed packed with grass tufts
@@ -451,18 +446,6 @@ function buildCourtyard() {
   // banners in front of the plaza wall
   for (const z of [2.5, 4.0, 5.5]) flag(10.3, 0, z);
   blocked(10.2, 10.9, 2.4, 5.6);
-
-  // black bell lamps on cables strung from the plaza poles to the CCA facade
-  for (const [z, zf] of [[2.5, -6], [12.5, 6], [27, 20]]) {
-    const a = [12.9, 9.2, z];
-    const b = [CCA.x + 0.1, 7.6, zf];
-    bar(layers.lamps, a, b, 0.02, C.black).castShadow = false;
-    for (const t of [0.3, 0.55, 0.8]) {
-      const p = a.map((v, i) => v + (b[i] - v) * t);
-      bar(layers.lamps, p, [p[0], p[1] - 0.8, p[2]], 0.015, C.black);
-      cyl(layers.lamps, 0.12, 0.32, 0.45, 8, C.black, p[0], p[1] - 1.25, p[2]);
-    }
-  }
 
   // people
   standingPerson(layers.people, -3.5, 19, 200, "#2c3a52", "#c9b79b");
@@ -618,7 +601,7 @@ function walkable(x, z) {
   return inBounds(x, z) ? { x, z } : null;
 }
 
-// ---------- the figure: white cape and pointed hood over a navy robe ----------
+// ---------- the figure: a white cape over a navy robe ----------
 
 const W = { start: { x: 6.5, z: 9.5 }, speed: 2.6, turn: 10 };
 const FLOOR = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -658,10 +641,8 @@ function buildWalker() {
   addMesh(body, new THREE.CylinderGeometry(0.09, 0.12, 0.1, 6), navy, 0, 1.24, 0); // collar
   addMesh(body, new THREE.OctahedronGeometry(0.035, 0), solid("#e2bd45"), 0, 1.13, 0.17); // gold clasp
 
-  // dark face under a tall white hood that leans back
+  // dark head
   addMesh(body, new THREE.IcosahedronGeometry(0.13, 0), solid("#141519"), 0, 1.38, 0.02);
-  const hood = addMesh(body, new THREE.ConeGeometry(0.19, 0.5, 6), white, 0.02, 1.6, -0.07);
-  hood.rotation.set(-0.5, 0, -0.18);
 
   scene.add(g);
   walker = { g, body, feet, cape, x: 0, z: 0, heading: 0, face: null, path: [], phase: 0, last: 0, leaving: false, gone: false };
@@ -840,19 +821,18 @@ export default {
   intro: "drone",
   hint: "Click the paving to walk · click the gate to leave · drag to orbit",
   // walking out through the gate: the camera rises behind the walker, the scene turns
-  // to wireframe, then the camera pulls back over the courtyard while everything falls
-  // away toward the gate; then the goodbye card
+  // to wireframe, then the camera pulls back over the courtyard while everything breaks
+  // apart from the middle of the courtyard outward; then the goodbye card
   ending: {
     view: { pos: [-2, 10, -6], target: [3.9, 1.2, -26], fov: 45 },
     wide: { pos: [-4, 21, 26], target: [3, 0, -18], fov: 45 },
-    from: [(GATE.x0 + GATE.x1) / 2, 0, COURT.z0],
+    from: [(BED.x0 + BED.x1) / 2, 0, (BED.z0 + BED.z1) / 2],
     title: "Goodbye CCA",
     back: "gate", // the view to come back to
   },
   layers: [
     { key: "cars", label: "Cars" },
     { key: "plants", label: "Trees & plants" },
-    { key: "lamps", label: "Lamps & cables" },
     { key: "people", label: "People & flags" },
     { key: "neighbours", label: "Neighbours" },
   ],
@@ -907,10 +887,10 @@ export default {
   // pointer (or null), `ray` the pointer's ray
   click(hit, ray) {
     if (walker.leaving) return;
-    let through = false; // trees, lamps, people, cars and the walker: walk to the paving behind them
+    let through = false; // trees, people, cars and the walker: walk to the paving behind them
     for (let o = hit?.object; o; o = o.parent) {
       if (o.userData.action === "leave") return leave();
-      if (o.userData.action === "walker" || [layers.plants, layers.lamps, layers.people, layers.cars].includes(o)) through = true;
+      if (o.userData.action === "walker" || [layers.plants, layers.people, layers.cars].includes(o)) through = true;
     }
     let p = null;
     if (hit && !through) {

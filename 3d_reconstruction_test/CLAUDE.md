@@ -22,7 +22,7 @@
 - `scenes/lowpoly.js`：所有场景共用的建模工具，包括 `box`、`cyl`、`bar`、`place`、`makeLayers`、`standingPerson`、`rand`/`reseed` 等。单位是米。
 - `scenes/old_gate.js`：场景 1 · Old Gate。点门可以进入 ID Studio（`userData.portal`）。
 - `scenes/id_studio.js`：场景 2 · ID Studio。
-- `scenes/main_gate.js`：场景 3 · Main Gate。围栏上有一扇可以走出去的门。院子里有一个可以点击移动的小人（白斗篷、尖兜帽、深蓝长袍），会绕开花坛等障碍物，障碍物用 `blocked()` 登记。小人走出门后进入结局：场景先变成 wireframe，再逐渐消解，最后显示 "Goodbye CCA"。
+- `scenes/main_gate.js`：场景 3 · Main Gate。围栏上有一扇可以走出去的门。院子里有一个可以点击移动的小人（白斗篷、深蓝长袍），会绕开花坛等障碍物，障碍物用 `blocked()` 登记。小人走出门后进入结局：场景先变成 wireframe，再从院子中间向外逐渐消解，最后显示 "Goodbye CCA"。
 - `photos/`：网页上实际用到的参考照片，已经压缩过。
 - `models/`：扫描模型（`.glb`）。
 - `Space Media/`：原始素材，包括无人机视频、手机照片和视频，一共大约 650 MB。只用来参考，网页不会加载。不要读整个视频，也不要往里加文件。

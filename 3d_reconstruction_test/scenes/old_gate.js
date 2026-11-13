@@ -194,7 +194,7 @@ function buildBuilding() {
     new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }),
   );
   doorway.position.set(0, y0 + 1.475, -DOOR.depth + 0.1);
-  doorway.userData.portal = { to: "studio", number: "Scene Two", title: "ID Studio", line: "Through the old gate, into the studio." };
+  doorway.userData.portal = { to: "studio" }; // the card comes from the studio scene
   scene.add(doorway);
 
   // lamp in the bay ceiling, signs and boxes on the wall
@@ -484,6 +484,8 @@ const STREET = [-0.5, 1.5, 7];
 
 export default {
   title: "Old Gate",
+  // title card shown before the scene opens
+  card: { number: "Scene One", title: "Old Gate", line: "The small side entrance, off the parking lot." },
   intro: "drone",
   layers: [
     { key: "cars", label: "Cars" },

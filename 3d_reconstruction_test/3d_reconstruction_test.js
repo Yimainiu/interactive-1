@@ -281,19 +281,19 @@ const SLATE_HOLD = 2200;
 const SLATE_OUT = 1100;
 let crossing = false;
 
-// walk toward the door, cut to a white card with the scene's name, then open on the new scene
-async function enterPortal(portal, point) {
-  if (crossing) return;
-  crossing = true;
-  canvas.style.cursor = "";
-  slate.querySelector(".slate-number").textContent = portal.number;
-  slate.querySelector(".slate-title").textContent = portal.title;
-  slate.querySelector(".slate-line").textContent = portal.line || "";
-  // the next scene's photo, washed out behind the type; wait for it so it fades in with the card
-  const def = SCENES[portal.to];
-  const src = def.views[def.intro].photo?.src;
+// the white card with a scene's number, name and line, over its photo; resolves when
+// the card has faded in and held. `instant` puts it up at once (page load: no flash)
+async function showCard(key, instant = false) {
+  const def = SCENES[key];
+  slate.querySelector(".slate-number").textContent = def.card.number;
+  slate.querySelector(".slate-title").textContent = def.card.title;
+  slate.querySelector(".slate-line").textContent = def.card.line || "";
   const bg = slate.querySelector(".slate-photo");
   bg.style.backgroundImage = "";
+  slate.classList.toggle("instant", instant);
+  slate.hidden = false;
+  // the scene's opening photo, washed out behind the type; wait for it so it fades in with the card
+  const src = def.views[def.intro].photo?.src;
   if (src) {
     const img = new Image();
     img.src = src;
@@ -304,7 +304,26 @@ async function enterPortal(portal, point) {
       // no photo: plain white card
     }
   }
+  slate.getBoundingClientRect(); // start the transitions from their hidden state
+  slate.classList.add("show");
+  await wait((instant ? 0 : SLATE_IN) + SLATE_HOLD);
+}
 
+// open on the scene behind the card and fade the card away
+async function hideCard(key) {
+  showScene(key);
+  goTo(SCENES[key].intro, true);
+  setModel(modelMode);
+  slate.classList.remove("instant", "show");
+  await wait(SLATE_OUT);
+  slate.hidden = true;
+}
+
+// walk toward the door, cut to the next scene's card, then open on that scene
+async function enterPortal(portal, point) {
+  if (crossing) return;
+  crossing = true;
+  canvas.style.cursor = "";
   // a short dolly toward the door while the card fades in
   const dir = point.clone().sub(camera.position);
   tween = {
@@ -312,17 +331,16 @@ async function enterPortal(portal, point) {
     from: { pos: camera.position.clone(), target: controls.target.clone(), fov: camera.fov },
     to: { pos: camera.position.clone().addScaledVector(dir, 0.6), target: point.clone(), fov: camera.fov },
   };
-  slate.hidden = false;
-  slate.getBoundingClientRect(); // start the fade from transparent
-  slate.classList.add("show");
-  await wait(SLATE_IN + SLATE_HOLD);
+  await showCard(portal.to);
+  await hideCard(portal.to);
+  crossing = false;
+}
 
-  showScene(portal.to);
-  goTo(def.intro, true);
-  setModel(modelMode);
-  slate.classList.remove("show");
-  await wait(SLATE_OUT);
-  slate.hidden = true;
+// page load: the first scene's card on a white screen, then the scene
+async function openingCard(key) {
+  crossing = true;
+  await showCard(key, true);
+  await hideCard(key);
   crossing = false;
 }
 
@@ -365,14 +383,16 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
-// the page opens on scene 1 with its photo. A link can pick a scene,
+// the page opens on scene 1's title card, then the scene. A link can pick a scene,
 // e.g. #studio, or go straight to one view of it, e.g. #studio/aisle
 const [startScene, startView] = location.hash.slice(1).split("/");
 if (SCENES[startScene] && SCENES[startScene].views[startView]) {
+  slate.classList.remove("instant");
+  slate.hidden = true;
   showScene(startScene);
   goTo(startView, true);
 } else {
-  switchScene(SCENES[startScene] ? startScene : Object.keys(SCENES)[0]);
+  openingCard(SCENES[startScene] ? startScene : Object.keys(SCENES)[0]);
 }
 
 renderer.setAnimationLoop((now) => {

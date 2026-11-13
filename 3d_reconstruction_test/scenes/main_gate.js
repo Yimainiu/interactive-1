@@ -519,6 +519,8 @@ function buildLights() {
 
 export default {
   title: "Main Gate",
+  // title card shown before the scene opens
+  card: { number: "Scene Three", title: "Main Gate", line: "The courtyard at the front of the school." },
   intro: "drone",
   layers: [
     { key: "cars", label: "Cars" },

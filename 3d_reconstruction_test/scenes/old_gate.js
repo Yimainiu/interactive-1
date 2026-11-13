@@ -487,12 +487,13 @@ function stepRain(now) {
   r.splashes.instanceMatrix.needsUpdate = true;
 }
 
+// overcast, for the rain: most of the light comes evenly from a grey sky,
+// with a weak, cool key from high above, so shadows are soft and faint
 function buildLights() {
-  scene.add(new THREE.HemisphereLight("#eef3f7", "#8d8a82", 2.0));
+  scene.add(new THREE.HemisphereLight("#dfe4e8", "#7c7e80", 2.7));
 
-  // low sun from the right, just behind the building, like in the phone photo
-  const sun = new THREE.DirectionalLight("#fff3df", 2.3);
-  sun.position.set(40, 32, -2);
+  const sun = new THREE.DirectionalLight("#e8edf1", 0.75);
+  sun.position.set(12, 50, 18);
   sun.target.position.set(0, 0, 4);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -504,7 +505,7 @@ function buildLights() {
   sun.shadow.bias = -0.0008;
   scene.add(sun, sun.target);
 
-  const fill = new THREE.DirectionalLight("#dfe8ff", 0.9);
+  const fill = new THREE.DirectionalLight("#d8e0e8", 0.5);
   fill.position.set(-10, 15, 30);
   scene.add(fill);
 }

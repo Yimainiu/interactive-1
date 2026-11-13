@@ -7,7 +7,7 @@
 **Before the Shadow Settles**
 An interactive poem — documenting an industrial design student’s life at CCA
 
-"3D Reconstruction Test" 是文件夹名和目前网页上的标题；作品的正式名称是上面这个。
+"3D Reconstruction Test" 是文件夹名（和主页上的链接文字）；网页标题和左上角面板用的是正式名称 "Before the Shadow Settles"。
 
 页面是用 three.js 根据照片和无人机素材重建的学校场景，风格是低多边形（low-poly）。
 线上地址：https://yimainiu.github.io/interactive-1/3d_reconstruction_test/3d_reconstruction_test.html

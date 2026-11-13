@@ -8,7 +8,7 @@ import { unlockSound, setAmbience } from "./ambience.js";
 import { addMarkers, pulseMarkers, pick, openScan, closeScan, isOpen, renderViewer } from "./scans.js";
 
 /* ------------------------------------------------------------------
-   3D Reconstruction Test
+   Before the Shadow Settles (folder: 3d_reconstruction_test)
    Low-poly scenes rebuilt from photos. Switching scenes first shows
    the photo, then fades it away to reveal the model from the same
    camera position. The panel switches between the photo, the

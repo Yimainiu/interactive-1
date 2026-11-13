@@ -407,6 +407,86 @@ function buildCamp() {
   standingPerson(P, -6.4, 15.3, 200, "#3a3a40", "#4d5a6e");
 }
 
+/* ==================================================================
+   RAIN: falling streaks over the whole site, and small splashes on the ground
+================================================================== */
+
+const RAIN = { count: 9000, speed: 13, len: 0.6, wind: 0.14, top: 26, splashes: 220 };
+let rain = null;
+
+function buildRain() {
+  const heads = new Float32Array(RAIN.count * 3);
+  const drop = (i, y) => {
+    heads[i * 3] = SITE.left + Math.random() * (SITE.right - SITE.left);
+    heads[i * 3 + 1] = y;
+    heads[i * 3 + 2] = SITE.back + Math.random() * (SITE.front - SITE.back);
+  };
+  for (let i = 0; i < RAIN.count; i++) drop(i, Math.random() * RAIN.top);
+
+  // each drop is one short line, slanted a little by the wind
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(RAIN.count * 6), 3));
+  const lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: "#8d9caa", transparent: true, opacity: 0.55, depthWrite: false }));
+  lines.frustumCulled = false;
+  lines.raycast = () => {}; // never in the way of a click on the door
+
+  // splashes: flat rings that open out where drops land, reused round-robin
+  const splashes = new THREE.InstancedMesh(
+    new THREE.RingGeometry(0.05, 0.08, 10).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: "#d4dde4", transparent: true, opacity: 0.7, depthWrite: false }),
+    RAIN.splashes,
+  );
+  splashes.frustumCulled = false;
+  splashes.raycast = () => {};
+  const born = new Float32Array(RAIN.splashes).fill(-1);
+  const at = new Float32Array(RAIN.splashes * 3);
+
+  layers.rain.add(lines, splashes);
+  rain = { heads, drop, geo, splashes, born, at, next: 0, last: 0, m: new THREE.Matrix4() };
+}
+
+function stepRain(now) {
+  const r = rain;
+  if (!layers.rain.visible) return;
+  const dt = Math.min((now - (r.last || now)) / 1000, 0.05);
+  r.last = now;
+  const t = now / 1000;
+  const pos = r.geo.attributes.position.array;
+  const fall = RAIN.speed * dt;
+  for (let i = 0; i < RAIN.count; i++) {
+    const k = i * 3;
+    r.heads[k] += RAIN.wind * fall;
+    r.heads[k + 1] -= fall;
+    // ground level: the sidewalk in front of the building is a step up from the lot
+    const ground = r.heads[k + 2] < WALK.depth ? WALK.height : 0;
+    if (r.heads[k + 1] < ground) {
+      if (Math.random() < 0.15) {
+        const s = r.next;
+        r.next = (r.next + 1) % RAIN.splashes;
+        r.born[s] = t;
+        r.at.set([r.heads[k], ground + 0.01, r.heads[k + 2]], s * 3);
+      }
+      r.drop(i, RAIN.top - Math.random() * 2);
+    }
+    const j = i * 6;
+    pos[j] = r.heads[k];
+    pos[j + 1] = r.heads[k + 1];
+    pos[j + 2] = r.heads[k + 2];
+    pos[j + 3] = r.heads[k] - RAIN.wind * RAIN.len;
+    pos[j + 4] = r.heads[k + 1] + RAIN.len;
+    pos[j + 5] = r.heads[k + 2];
+  }
+  r.geo.attributes.position.needsUpdate = true;
+
+  for (let s = 0; s < RAIN.splashes; s++) {
+    const age = (t - r.born[s]) / 0.35;
+    const size = r.born[s] >= 0 && age < 1 ? 0.6 + age * 2.2 : 0;
+    r.m.makeScale(size, 1, size).setPosition(r.at[s * 3], r.at[s * 3 + 1], r.at[s * 3 + 2]);
+    r.splashes.setMatrixAt(s, r.m);
+  }
+  r.splashes.instanceMatrix.needsUpdate = true;
+}
+
 function buildLights() {
   scene.add(new THREE.HemisphereLight("#eef3f7", "#8d8a82", 2.0));
 
@@ -454,7 +534,10 @@ export default {
     { key: "people", label: "People" },
     { key: "camp", label: "Tents" },
     { key: "roof", label: "Roof gear" },
+    { key: "rain", label: "Rain" },
   ],
+  // the sound of rain plays while this scene is on screen and its Rain layer is shown
+  ambience: { sound: "rain", layer: "rain" },
   views: {
     // DJI drone camera: 24 mm equiv., 16:9 photos
     drone: { label: "Drone", pos: DRONE, target: aim(DRONE, -10.6, 26.7), photo: { fov: 43, aspect: 16 / 9, name: "DJI_0007", src: "photos/old_gate.jpg" } },
@@ -472,6 +555,12 @@ export default {
     buildGround();
     buildBuilding();
     buildStreet();
+    buildRain();
     return scene;
+  },
+
+  // called every frame
+  update(camera, now) {
+    stepRain(now);
   },
 };

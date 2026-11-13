@@ -410,9 +410,57 @@ body.ending #hint {
   background: var(--ink);
 }
 
-#slate.farewell .slate-number:empty,
-#slate.farewell .slate-line:empty {
+#slate .slate-number:empty,
+#slate .slate-line:empty {
   display: none;
+}
+
+/* the project's name on page load: a longer title, so a little smaller */
+#slate.project .slate-title {
+  font-size: clamp(2.2rem, 6.4vw, 4.6rem);
+  text-wrap: balance;
+}
+
+#slate.project .slate-line {
+  max-width: 34rem;
+  text-wrap: balance;
+}
+
+/* scene 1's card waits for a click */
+#slate.waiting {
+  cursor: pointer;
+}
+
+.slate-enter {
+  margin: 1.4rem 0 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  animation: enter-in 1.2s ease 1.6s both, enter-breathe 2.4s ease-in-out 2.8s infinite;
+}
+
+.slate-enter[hidden] {
+  display: none;
+}
+
+@keyframes enter-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.75;
+  }
+}
+
+@keyframes enter-breathe {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .slate-again {

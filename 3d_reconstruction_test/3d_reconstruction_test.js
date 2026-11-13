@@ -4,6 +4,7 @@ import { materials, dissolve } from "./scenes/lowpoly.js";
 import oldGate from "./scenes/old_gate.js";
 import idStudio from "./scenes/id_studio.js";
 import mainGate from "./scenes/main_gate.js";
+import { unlockSound, setAmbience } from "./ambience.js";
 import { addMarkers, pulseMarkers, pick, openScan, closeScan, isOpen, renderViewer } from "./scans.js";
 
 /* ------------------------------------------------------------------
@@ -286,7 +287,7 @@ let crossing = false;
 
 // the white card with a scene's number, name and line, over its photo; resolves when
 // the card has faded in and held. `instant` puts it up at once (page load: no flash)
-async function showCard(key, instant = false) {
+async function showCard(key, instant = false, hold = SLATE_HOLD) {
   const def = SCENES[key];
   slate.querySelector(".slate-number").textContent = def.card.number;
   slate.querySelector(".slate-title").textContent = def.card.title;
@@ -309,7 +310,7 @@ async function showCard(key, instant = false) {
   }
   slate.getBoundingClientRect(); // start the transitions from their hidden state
   slate.classList.add("show");
-  await wait((instant ? 0 : SLATE_IN) + SLATE_HOLD);
+  await wait((instant ? 0 : SLATE_IN) + hold);
 }
 
 // open on the scene behind the card and fade the card away
@@ -339,10 +340,53 @@ async function enterPortal(portal, point) {
   crossing = false;
 }
 
-// page load: the first scene's card on a white screen, then the scene
+// ---------- page load: the project's name, then scene 1's card, then a click ----------
+
+const PROJECT = {
+  title: "Before the Shadow Settles",
+  line: "An interactive poem — documenting an industrial design student’s life at CCA",
+};
+const PROJECT_HOLD = 4500;
+const CARD_SWAP = 2000; // the type fading and the rules drawing back in, per the CSS
+
+// waits on the card for a click or Enter / space
+function clickToEnter() {
+  const prompt = slate.querySelector(".slate-enter");
+  prompt.hidden = false;
+  slate.classList.add("waiting");
+  return new Promise((done) => {
+    const go = (e) => {
+      if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") return;
+      slate.removeEventListener("click", go);
+      window.removeEventListener("keydown", go);
+      slate.classList.remove("waiting");
+      prompt.hidden = true;
+      done();
+    };
+    slate.addEventListener("click", go);
+    window.addEventListener("keydown", go);
+  });
+}
+
 async function openingCard(key) {
   crossing = true;
-  await showCard(key, true);
+  // the project's name on the white screen
+  slate.classList.add("project");
+  slate.querySelector(".slate-number").textContent = "";
+  slate.querySelector(".slate-title").textContent = PROJECT.title;
+  slate.querySelector(".slate-line").textContent = PROJECT.line;
+  slate.hidden = false;
+  slate.getBoundingClientRect();
+  slate.classList.add("instant", "show");
+  await wait(PROJECT_HOLD);
+  // its type fades away while the white card stays up ("instant" keeps it opaque)
+  slate.classList.remove("show");
+  await wait(CARD_SWAP);
+  slate.classList.remove("project");
+  // the first scene's card, held until a click
+  await showCard(key, true, 0);
+  await clickToEnter();
+  unlockSound();
   await hideCard(key);
   crossing = false;
 }
@@ -485,7 +529,10 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
-// the page opens on scene 1's title card, then the scene. A link can pick a scene,
+// sound can only start after a click or key press
+for (const type of ["pointerdown", "keydown"]) window.addEventListener(type, unlockSound);
+
+// the page opens on the project's name, then scene 1's title card, then the scene. A link can pick a scene,
 // e.g. #studio, or go straight to one view of it, e.g. #studio/aisle
 const [startScene, startView] = location.hash.slice(1).split("/");
 if (SCENES[startScene] && SCENES[startScene].views[startView]) {
@@ -504,6 +551,10 @@ renderer.setAnimationLoop((now) => {
   if (SCENES[active].update?.(camera, now) === "leave") goodbye();
   pulseMarkers(built[active], now);
   controls.enabled = !isOpen() && !ending;
+  // a scene's ambient sound, while it's on screen and its layer is shown
+  const amb = SCENES[active].ambience;
+  const on = amb && !crossing && !document.hidden && built[active].userData.layers[amb.layer].visible;
+  setAmbience(on ? amb.sound : null);
   renderer.render(built[active], camera);
   renderViewer(now);
 });

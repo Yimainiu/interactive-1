@@ -25,9 +25,11 @@ An interactive poem — documenting an industrial design student’s life at CCA
 - `3d_reconstruction_test.html`：页面结构和左侧面板，包括 Scene、Display、View、Show。three.js 通过 importmap 从 CDN 加载，不需要安装任何东西。
 - `3d_reconstruction_test.js`：主程序，负责渲染器、相机、视角切换、照片和模型的切换、面板，以及点门进入下一个场景（portal）。
 - `3d_reconstruction_test.css`：样式。
+- 开场顺序：先在白屏上显示项目名（`PROJECT`，在主程序里），淡出后换成第 1 幕的标题卡，停住等点击（或按 Enter / 空格）才进入场景。直接带视角的链接（如 `#gate/street`）会跳过开场。
+- `ambience.js`：在浏览器里实时合成的环境声，不用音频文件，目前只有雨声。浏览器要求先有点击或按键才能出声，所以第一次点击时才会启动。
 - `scans.js`：3D 扫描弹窗。场景里只要有物体带 `userData.scan = { src, title, note }`，就会出现发光的小点，点开后加载对应的 `.glb`。
 - `scenes/lowpoly.js`：所有场景共用的建模工具，包括 `box`、`cyl`、`bar`、`place`、`makeLayers`、`standingPerson`、`rand`/`reseed` 等。单位是米。
-- `scenes/old_gate.js`：场景 1 · Old Gate。点门可以进入 ID Studio（`userData.portal`）。
+- `scenes/old_gate.js`：场景 1 · Old Gate。点门可以进入 ID Studio（`userData.portal`）。场景里在下雨（雨丝和地面水花，`buildRain()` / `stepRain()`），属于 "Rain" 图层；这个图层打开时会播放雨声。
 - `scenes/id_studio.js`：场景 2 · ID Studio。
 - `scenes/main_gate.js`：场景 3 · Main Gate。围栏上有一扇可以走出去的门。院子里有一个可以点击移动的小人（白斗篷、深蓝长袍），会绕开花坛等障碍物，障碍物用 `blocked()` 登记。小人走出门后进入结局：场景先变成 wireframe，再从院子中间向外破碎散开，最后显示 "Goodbye CCA"。
 - `photos/`：网页上实际用到的参考照片，已经压缩过。
@@ -42,7 +44,7 @@ An interactive poem — documenting an industrial design student’s life at CCA
 - `layers: [{ key, label }]`：对应面板 Show 下面的复选框。物体建在 `layers.<key>` 里就能被这个复选框开关。要删掉一个选项，就把这一项和所有用到它的代码一起删掉。
 - `views`：相机视角。带 `photo` 的视角会对准原照片的拍摄位置，`fov` 和 `aspect` 按相机参数设置。
 - `build()`：先调用 `reseed(n)`，再按顺序构建场景。
-- 可选项：`hint`（右下角提示文字）；`click(hit, ray)`（点到的不是扫描物体或门时调用）；`update(camera, now)`（每帧调用，返回 `"leave"` 时主程序播放结局）；`ending`（结局的镜头、消解中心和标题）；`reset()`（点 "Walk back in" 后复原）。
+- 可选项：`ambience: { sound, layer }`（场景在屏幕上、且这个图层打开时播放的环境声）；`hint`（右下角提示文字）；`click(hit, ray)`（点到的不是扫描物体或门时调用）；`update(camera, now)`（每帧调用，返回 `"leave"` 时主程序播放结局）；`ending`（结局的镜头、消解中心和标题）；`reset()`（点 "Walk back in" 后复原）。
 - 破碎散开效果在 `lowpoly.js` 的 `dissolvable()`、`shatterable()`、`dissolve` 里。每个三角形是一块碎片，由共用的着色器推动；`dissolve.amount` 从 0 变到 1。
 
 用 `rand()` 的地方顺序很重要。在调用 `rand()` 的代码前面增加或删除东西，后面所有"随机"的树、车的样子都会跟着变。改动时要留意这一点。

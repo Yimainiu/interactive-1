@@ -174,6 +174,7 @@ export function pick(scene, cam, clientX, clientY, canvas) {
       if (o.userData.scanOwner) return { scan: o.userData.scanOwner.userData.scan };
       if (o.userData.scan) return { scan: o.userData.scan };
       if (o.userData.portal) return { portal: o.userData.portal };
+      if (o.userData.action) return { action: o.userData.action };
     }
     // the first visible thing hit is not clickable: something is in front of it
     if (!hit.object.isSprite) return null;

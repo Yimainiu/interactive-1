@@ -13,6 +13,7 @@ import {
   facetedGround,
   makeLayers,
   standingPerson,
+  dissolvable,
 } from "./lowpoly.js";
 
 /* ------------------------------------------------------------------
@@ -73,6 +74,7 @@ const BLEACH = { z0: 22.6, z1: 34.9, x1: 10.6, tiers: 10 };
 const WALK = { x1: -5.6, z0: -3, top: 0.5 }; // raised walk along the CCA facade, with 3 steps
 const BED = { x0: -1.48, x1: 4.6, z0: -2.29, z1: 8.07 };
 const SITE = { x0: -42, x1: 42, z0: -64, z1: 66 };
+const GATE = { x0: 2.5, x1: 5.3 }; // the walk-through gate in the fence, between two posts
 
 let scene;
 let layers; // groups the panel can show or hide
@@ -408,32 +410,47 @@ function buildCourtyard() {
   // the planted bed in the middle and its tree (top measured at 4.95 m)
   plantedBed(BED.x0, BED.x1, BED.z0, BED.z1, 420);
   tree(1.0, 2.9, 1.3, 0.4);
+  blocked(BED.x0, BED.x1, BED.z0, BED.z1);
 
   // low shrub planters at the foot of the CCA facade
   for (const [z0, z1] of [[13, 21], [-14, -6]]) box(layers.plants, 2.0, 0.8, z1 - z0, C.hedge, CCA.x + 1.4, WALK.top, (z0 + z1) / 2);
   box(layers.plants, 2.0, 0.8, 8, C.hedge, CCA.x + 1.4, 0, -17);
+  blocked(CCA.x + 0.4, CCA.x + 2.4, -21, -13);
 
   // hedge planter at the end of the courtyard, then a row of young trees before the fence
   box(layers.plants, 4.9, 1.1, 1.8, C.hedge, 2.3, 0, -13);
-  for (const x of [-7.5, -3, 1.5, 5.8, 9.0]) tree(x, -21.5, 1.0);
+  blocked(2.3 - 2.45, 2.3 + 2.45, -13.9, -12.1);
+  for (const x of [-7.5, -3, 1.5, 5.8, 9.0]) {
+    tree(x, -21.5, 1.0);
+    blocked(x - 0.15, x + 0.15, -21.65, -21.35);
+  }
 
-  // the main gate: black picket fence across the courtyard end, taller gate posts
+  // the main gate: black picket fence across the courtyard end, taller posts,
+  // and a gap for the walk-through gate (built in buildGate)
   const fence = batch();
   const fx0 = COURT.x0;
   const fx1 = TIMBER.x0;
-  for (let x = fx0; x <= fx1; x += 0.2) fence.box(0.03, 2.4, 0.03, C.black, x, 0, COURT.z0);
-  for (const y of [0.1, 2.3]) fence.box(fx1 - fx0, 0.06, 0.06, C.black, (fx0 + fx1) / 2, y, COURT.z0);
-  for (const x of [fx0, -3.5, 2.5, fx1]) fence.box(0.2, 3.0, 0.2, C.black, x, 0, COURT.z0);
+  for (let x = fx0; x <= fx1; x += 0.2) {
+    if (x > GATE.x0 - 0.1 && x < GATE.x1 + 0.1) continue;
+    fence.box(0.03, 2.4, 0.03, C.black, x, 0, COURT.z0);
+  }
+  for (const y of [0.1, 2.3]) {
+    for (const [a, b] of [[fx0, GATE.x0], [GATE.x1, fx1]]) fence.box(b - a, 0.06, 0.06, C.black, (a + b) / 2, y, COURT.z0);
+  }
+  for (const x of [fx0, -3.5, fx1]) fence.box(0.2, 3.0, 0.2, C.black, x, 0, COURT.z0);
   fence.addTo(scene, true);
+  buildGate();
 
   // red A-frame sign on the paving
   const sign = place(scene, 3.4, 12.3, 0);
+  blocked(3.05, 3.75, 12.0, 12.6);
   for (const s of [-1, 1]) {
     const leaf = box(sign, 0.62, 0.95, 0.03, C.sign, 0, 0, s * 0.17);
     leaf.rotation.x = s * 0.18;
   }
   // banners in front of the plaza wall
   for (const z of [2.5, 4.0, 5.5]) flag(10.3, 0, z);
+  blocked(10.2, 10.9, 2.4, 5.6);
 
   // black bell lamps on cables strung from the plaza poles to the CCA facade
   for (const [z, zf] of [[2.5, -6], [12.5, 6], [27, 20]]) {
@@ -450,7 +467,306 @@ function buildCourtyard() {
   // people
   standingPerson(layers.people, -3.5, 19, 200, "#2c3a52", "#c9b79b");
   standingPerson(layers.people, -2.8, -9, 30, "#3d4a37", "#202226");
+  blocked(-3.75, -3.25, 18.75, 19.25);
+  blocked(-3.05, -2.55, -9.25, -8.75);
   standingPerson(layers.people, 22, 0, 120, "#6a2f2f", "#33363d").position.y = PLAZA.y;
+}
+
+/* ==================================================================
+   THE GATE AND THE WALKER
+   A small caped figure stands in the courtyard. Click the paving and
+   it walks there, around the planters; click the gate (or the street
+   beyond it) and it walks out, which ends the visit.
+================================================================== */
+
+let gateLeaves = []; // { pivot, side }: hinged on the posts, swinging out toward the street
+let gateAngle = 0;
+
+function buildGate() {
+  const z = COURT.z0;
+  const mid = (GATE.x0 + GATE.x1) / 2;
+  const g = new THREE.Group();
+  g.userData.action = "leave"; // clicking any part of it walks out
+  scene.add(g);
+
+  // two square posts with pyramid caps, and a bar across the top
+  for (const x of [GATE.x0, GATE.x1]) {
+    box(g, 0.26, 3.2, 0.26, C.black, x, 0, z);
+    box(g, 0.36, 0.08, 0.36, C.black, x, 3.2, z);
+    const cap = addMesh(g, new THREE.ConeGeometry(0.22, 0.32, 4), mat(C.black), x, 3.44, z);
+    cap.rotation.y = Math.PI / 4;
+  }
+  box(g, GATE.x1 - GATE.x0, 0.08, 0.08, C.black, mid, 2.95, z);
+
+  // two leaves of pickets; their tops rise to an arch where they meet
+  const hinge0 = GATE.x0 + 0.15;
+  const hinge1 = GATE.x1 - 0.15;
+  const w = (hinge1 - hinge0) / 2 - 0.02;
+  gateLeaves = [];
+  for (const side of [1, -1]) {
+    const pivot = place(g, side > 0 ? hinge0 : hinge1, z, 0);
+    const leaf = batch();
+    const n = 8;
+    for (let i = 0; i <= n; i++) {
+      const u = 0.04 + (i / n) * (w - 0.08);
+      const h = 2.15 + 0.35 * Math.sin((Math.PI / 2) * (u / w));
+      leaf.box(0.035, h, 0.035, C.black, side * u, 0.05, 0);
+    }
+    for (const y of [0.1, 1.1, 2.05]) leaf.box(w, 0.06, 0.06, C.black, (side * w) / 2, y, 0);
+    leaf.addTo(pivot, true);
+    gateLeaves.push({ pivot, side });
+  }
+
+  // invisible click target filling the opening
+  const target = new THREE.Mesh(
+    new THREE.BoxGeometry(GATE.x1 - GATE.x0, 2.8, 0.6),
+    new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }),
+  );
+  target.position.set(mid, 1.4, z);
+  g.add(target);
+}
+
+// ---------- where the walker can go ----------
+
+const R = 0.4; // how close the walker's centre comes to anything
+const blocks = []; // rectangles on the floor [x0, x1, z0, z1], grown by R
+function blocked(x0, x1, z0, z1, snap = true) {
+  blocks.push({ r: [x0 - R, x1 + R, z0 - R, z1 + R], snap });
+}
+// the open paving: from the CCA's low planters to the plaza wall, the fence to the bleachers
+const BOUNDS = [COURT.x0 + R, COURT.x1 - R, COURT.z0 + R, BLEACH.z0 - R];
+// the raised walk and its steps, and the timber building, are walls: a click there is ignored
+function blockWalls() {
+  blocked(COURT.x0, WALK.x1 + 1.5, WALK.z0, COURT.z1, false);
+  blocked(TIMBER.x0, TIMBER.x1, TIMBER.z0, TIMBER.z1, false);
+}
+
+const inside = (x, z, [x0, x1, z0, z1]) => x > x0 && x < x1 && z > z0 && z < z1;
+const inBounds = (x, z) => x >= BOUNDS[0] && x <= BOUNDS[1] && z >= BOUNDS[2] && z <= BOUNDS[3];
+
+// does the segment a-b pass through the inside of rectangle r? (Liang-Barsky)
+function crosses(ax, az, bx, bz, [x0, x1, z0, z1]) {
+  let t0 = 0;
+  let t1 = 1;
+  const dx = bx - ax;
+  const dz = bz - az;
+  for (const [p, q] of [[-dx, ax - x0], [dx, x1 - ax], [-dz, az - z0], [dz, z1 - az]]) {
+    if (p === 0) {
+      if (q <= 0) return false;
+      continue;
+    }
+    const t = q / p;
+    if (p < 0) {
+      if (t > t1) return false;
+      t0 = Math.max(t0, t);
+    } else {
+      if (t < t0) return false;
+      t1 = Math.min(t1, t);
+    }
+  }
+  return t1 - t0 > 1e-6;
+}
+
+// shortest way from a to b around the blocks: a visibility graph over the blocks' corners
+function findPath(a, b) {
+  const E = 0.03;
+  const nodes = [a, b];
+  for (const { r } of blocks) {
+    for (const x of [r[0] - E, r[1] + E]) {
+      for (const z of [r[2] - E, r[3] + E]) {
+        if (inBounds(x, z) && !blocks.some((o) => inside(x, z, o.r))) nodes.push({ x, z });
+      }
+    }
+  }
+  // a block the walker already stands in can't stop it walking out of it
+  const live = blocks.filter((o) => !inside(a.x, a.z, o.r));
+  const clear = (p, q) => !live.some((o) => crosses(p.x, p.z, q.x, q.z, o.r));
+  const dist = nodes.map(() => Infinity);
+  const prev = nodes.map(() => -1);
+  const done = nodes.map(() => false);
+  dist[0] = 0;
+  for (;;) {
+    let i = -1;
+    for (let j = 0; j < nodes.length; j++) if (!done[j] && dist[j] < Infinity && (i < 0 || dist[j] < dist[i])) i = j;
+    if (i < 0) return null;
+    if (i === 1) break;
+    done[i] = true;
+    for (let j = 0; j < nodes.length; j++) {
+      if (done[j]) continue;
+      const d = dist[i] + Math.hypot(nodes[j].x - nodes[i].x, nodes[j].z - nodes[i].z);
+      if (d < dist[j] && clear(nodes[i], nodes[j])) {
+        dist[j] = d;
+        prev[j] = i;
+      }
+    }
+  }
+  const path = [];
+  for (let i = 1; i !== 0; i = prev[i]) path.unshift({ x: nodes[i].x, z: nodes[i].z });
+  return path;
+}
+
+// a click inside a small block (the bed, a planter) walks to its nearest edge instead
+function walkable(x, z) {
+  for (const { r, snap } of blocks) {
+    if (!inside(x, z, r)) continue;
+    if (!snap) return null;
+    const out = [[r[0] - 0.05, z, x - r[0]], [r[1] + 0.05, z, r[1] - x], [x, r[2] - 0.05, z - r[2]], [x, r[3] + 0.05, r[3] - z]];
+    out.sort((p, q) => p[2] - q[2]);
+    [x, z] = out.find(([px, pz]) => inBounds(px, pz) && !blocks.some((o) => inside(px, pz, o.r))) || [];
+    if (x === undefined) return null;
+  }
+  return inBounds(x, z) ? { x, z } : null;
+}
+
+// ---------- the figure: white cape and pointed hood over a navy robe ----------
+
+const W = { start: { x: 6.5, z: 9.5 }, speed: 2.6, turn: 10 };
+const FLOOR = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+let walker = null;
+
+// the figure gets its own materials, so the wireframe toggle leaves it solid
+function solid(color, extra = {}) {
+  return new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.8, ...extra });
+}
+
+function buildWalker() {
+  const g = new THREE.Group();
+  g.userData.action = "walker";
+  const body = new THREE.Group(); // bobs while walking
+  g.add(body);
+  const navy = solid("#2b3557");
+  const sleeve = solid("#3c5286");
+  const white = solid("#eef0f2", { side: THREE.DoubleSide });
+
+  const feet = [-1, 1].map((s) => addMesh(body, new THREE.BoxGeometry(0.1, 0.08, 0.2), solid("#1b2036"), s * 0.08, 0.04, 0.02));
+  // robe: a six-sided skirt, wider at the hem
+  addMesh(body, new THREE.CylinderGeometry(0.13, 0.25, 0.72, 6), navy, 0, 0.42, 0);
+  // sleeves poking out under the cape
+  for (const s of [-1, 1]) {
+    const arm = addMesh(body, new THREE.CylinderGeometry(0.05, 0.085, 0.42, 5), sleeve, s * 0.26, 0.82, 0.02);
+    arm.rotation.z = s * 0.45;
+  }
+
+  // cape: an open cone hung from the shoulders, its hem cut into points
+  const capeGeo = new THREE.CylinderGeometry(0.1, 0.46, 0.62, 9, 1, true);
+  const pos = capeGeo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    if (pos.getY(i) < 0) pos.setY(i, pos.getY(i) + (i % 2 ? 0.07 : -0.03));
+  }
+  capeGeo.translate(0, -0.31, 0); // pivot at the shoulders, so it can sway
+  const cape = addMesh(body, capeGeo, white, 0, 1.26, 0);
+  addMesh(body, new THREE.CylinderGeometry(0.09, 0.12, 0.1, 6), navy, 0, 1.24, 0); // collar
+  addMesh(body, new THREE.OctahedronGeometry(0.035, 0), solid("#e2bd45"), 0, 1.13, 0.17); // gold clasp
+
+  // dark face under a tall white hood that leans back
+  addMesh(body, new THREE.IcosahedronGeometry(0.13, 0), solid("#141519"), 0, 1.38, 0.02);
+  const hood = addMesh(body, new THREE.ConeGeometry(0.19, 0.5, 6), white, 0.02, 1.6, -0.07);
+  hood.rotation.set(-0.5, 0, -0.18);
+
+  scene.add(g);
+  walker = { g, body, feet, cape, x: 0, z: 0, heading: 0, face: null, path: [], phase: 0, last: 0, leaving: false, gone: false };
+  resetWalker();
+}
+
+function resetWalker() {
+  Object.assign(walker, { x: W.start.x, z: W.start.z, heading: Math.PI, face: null, path: [], leaving: false, gone: false });
+  gateAngle = 0;
+}
+
+// a coral ring on the paving where you clicked
+let ring = null;
+function showRing(x, z) {
+  ring ??= new THREE.Mesh(
+    new THREE.RingGeometry(0.22, 0.34, 20).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: "#e08a6a", transparent: true, depthWrite: false }),
+  );
+  scene.add(ring);
+  ring.position.set(x, 0.03, z);
+  ring.userData.start = performance.now();
+}
+
+function walkTo(x, z) {
+  const goal = walkable(x, z);
+  if (!goal) return;
+  const path = findPath({ x: walker.x, z: walker.z }, goal);
+  if (!path) return;
+  walker.path = path;
+  walker.face = null;
+  showRing(goal.x, goal.z);
+}
+
+// to the gate, through it, and a step onto the sidewalk; then turn back to face the school
+function leave() {
+  const mid = (GATE.x0 + GATE.x1) / 2;
+  const path = findPath({ x: walker.x, z: walker.z }, { x: mid, z: BOUNDS[2] + 0.05 });
+  if (!path) return;
+  walker.path = [...path, { x: mid, z: COURT.z0 - 1.0 }, { x: mid, z: COURT.z0 - 1.7 }];
+  walker.face = 0;
+  walker.leaving = true;
+  showRing(mid, COURT.z0 - 1.7);
+}
+
+// each frame: walk along the path, swing the gate, animate the figure.
+// Returns "leave" on the frame the walker steps out through the gate
+function stepWalker(now) {
+  const w = walker;
+  const dt = Math.min((now - (w.last || now)) / 1000, 0.05);
+  w.last = now;
+  let moving = false;
+  let want = w.heading;
+  if (w.path.length) {
+    const p = w.path[0];
+    const dx = p.x - w.x;
+    const dz = p.z - w.z;
+    const d = Math.hypot(dx, dz);
+    const step = W.speed * dt;
+    if (d <= step) {
+      w.x = p.x;
+      w.z = p.z;
+      w.path.shift();
+    } else {
+      w.x += (dx / d) * step;
+      w.z += (dz / d) * step;
+    }
+    if (d > 1e-4) want = Math.atan2(dx, dz);
+    moving = true;
+  } else if (w.face !== null) {
+    want = w.face;
+  }
+  // turn the short way round
+  let da = want - w.heading;
+  da = Math.atan2(Math.sin(da), Math.cos(da));
+  w.heading += da * Math.min(1, dt * W.turn);
+
+  // walk cycle: bob, feet, cape trailing behind
+  w.phase = moving ? w.phase + dt * W.speed * 4.4 : w.phase * Math.max(0, 1 - dt * 6);
+  const swing = Math.sin(w.phase);
+  const idle = Math.sin(now / 700) * 0.008;
+  w.body.position.y = moving ? Math.abs(swing) * 0.05 : idle;
+  w.feet.forEach((f, i) => (f.position.z = 0.02 + (i ? swing : -swing) * 0.12));
+  w.cape.rotation.x += ((moving ? -0.28 + Math.sin(w.phase * 2) * 0.05 : 0) - w.cape.rotation.x) * Math.min(1, dt * 6);
+  w.cape.rotation.z = moving ? swing * 0.04 : 0;
+  w.g.position.set(w.x, w.z < COURT.z0 ? 0.12 : 0, w.z);
+  w.g.rotation.y = w.heading;
+
+  // the gate swings open as the walker comes near it
+  const mid = (GATE.x0 + GATE.x1) / 2;
+  const near = w.leaving || Math.hypot(w.x - mid, w.z - COURT.z0) < 3.2;
+  gateAngle += ((near ? 1.35 : 0) - gateAngle) * Math.min(1, dt * 2.5);
+  for (const { pivot, side } of gateLeaves) pivot.rotation.y = side * gateAngle;
+
+  if (ring) {
+    const t = (now - ring.userData.start) / 900;
+    ring.visible = t < 1;
+    ring.material.opacity = 1 - t;
+    ring.scale.setScalar(1 + t * 0.6);
+  }
+
+  if (w.leaving && !w.gone && w.z < COURT.z0 - 0.3) {
+    w.gone = true;
+    return "leave";
+  }
+  return null;
 }
 
 /* ==================================================================
@@ -522,6 +838,17 @@ export default {
   // title card shown before the scene opens
   card: { number: "Scene Three", title: "Main Gate", line: "The courtyard at the front of the school." },
   intro: "drone",
+  hint: "Click the paving to walk · click the gate to leave · drag to orbit",
+  // walking out through the gate: the camera rises behind the walker, the scene turns
+  // to wireframe, then the camera pulls back over the courtyard while everything falls
+  // away toward the gate; then the goodbye card
+  ending: {
+    view: { pos: [-2, 10, -6], target: [3.9, 1.2, -26], fov: 45 },
+    wide: { pos: [-4, 21, 26], target: [3, 0, -18], fov: 45 },
+    from: [(GATE.x0 + GATE.x1) / 2, 0, COURT.z0],
+    title: "Goodbye CCA",
+    back: "gate", // the view to come back to
+  },
   layers: [
     { key: "cars", label: "Cars" },
     { key: "plants", label: "Trees & plants" },
@@ -569,6 +896,43 @@ export default {
     buildNeighbours();
     buildCourtyard();
     buildStreets();
+    blockWalls();
+    buildWalker();
+    // every surface can break apart for the ending
+    scene.traverse((obj) => obj.isMesh && dissolvable(obj.material));
     return scene;
+  },
+
+  // a click that didn't hit a scan or a door: `hit` is the first thing under the
+  // pointer (or null), `ray` the pointer's ray
+  click(hit, ray) {
+    if (walker.leaving) return;
+    let through = false; // trees, lamps, people, cars and the walker: walk to the paving behind them
+    for (let o = hit?.object; o; o = o.parent) {
+      if (o.userData.action === "leave") return leave();
+      if (o.userData.action === "walker" || [layers.plants, layers.lamps, layers.people, layers.cars].includes(o)) through = true;
+    }
+    let p = null;
+    if (hit && !through) {
+      if (hit.point.y > 0.7) return; // a wall or a roof
+      p = hit.point;
+    } else {
+      p = ray.intersectPlane(FLOOR, new THREE.Vector3());
+    }
+    if (!p) return;
+    // the sidewalk or street past the fence: out through the gate
+    if (p.z < COURT.z0 && p.x > COURT.x0 && p.x < TIMBER.x0) return leave();
+    walkTo(p.x, p.z);
+  },
+
+  // called every frame; returns "leave" when the walker has stepped out of the gate
+  update(camera, now) {
+    return stepWalker(now);
+  },
+
+  // back to the start, after the goodbye
+  reset() {
+    resetWalker();
+    if (ring) ring.visible = false;
   },
 };

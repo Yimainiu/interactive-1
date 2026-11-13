@@ -386,6 +386,50 @@ label input {
   opacity: 1;
 }
 
+/* leaving the main gate: the panels fade while the scene falls away */
+#info,
+#controls,
+#hint {
+  transition: opacity 1.2s ease;
+}
+
+body.ending #info,
+body.ending #controls,
+body.ending #hint {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* the goodbye card sits on the same paper as the empty scene, with no photo */
+#slate.farewell {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+#slate.farewell .slate-rule {
+  background: var(--ink);
+}
+
+#slate.farewell .slate-number:empty,
+#slate.farewell .slate-line:empty {
+  display: none;
+}
+
+.slate-again {
+  margin-top: 1.2rem;
+  font-family: Arial, Helvetica, sans-serif;
+  opacity: 0;
+  transition: opacity 1s ease 2.4s;
+}
+
+#slate.show .slate-again {
+  opacity: 1;
+}
+
+.slate-again[hidden] {
+  display: none;
+}
+
 /* phones: keep the panels small so the model stays visible */
 @media (max-width: 600px) {
   #info,

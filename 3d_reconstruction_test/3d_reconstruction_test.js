@@ -1,10 +1,10 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { materials } from "./scenes/lowpoly.js";
+import { materials, dissolve } from "./scenes/lowpoly.js";
 import oldGate from "./scenes/old_gate.js";
 import idStudio from "./scenes/id_studio.js";
 import mainGate from "./scenes/main_gate.js";
-import { addMarkers, pulseMarkers, pick, openScan, isOpen, renderViewer } from "./scans.js";
+import { addMarkers, pulseMarkers, pick, openScan, closeScan, isOpen, renderViewer } from "./scans.js";
 
 /* ------------------------------------------------------------------
    3D Reconstruction Test
@@ -46,6 +46,8 @@ const sceneButtons = document.querySelectorAll("#scenes button");
 const modeButtons = document.querySelectorAll("#modes button");
 const viewBox = document.querySelector("#views");
 const layerBox = document.querySelector("#layers");
+const hint = document.querySelector("#hint");
+const HINT = hint.textContent; // scenes can swap in their own
 
 const built = {}; // each scene is built the first time it's shown
 let active = null; // key of the scene on screen
@@ -113,7 +115,7 @@ function goTo(name, instant = false) {
 
 function updateTween(now) {
   if (!tween) return;
-  const t = Math.min((now - tween.start) / 1200, 1);
+  const t = Math.min((now - tween.start) / (tween.dur || 1200), 1);
   const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   camera.position.lerpVectors(tween.from.pos, tween.to.pos, e);
   controls.target.lerpVectors(tween.from.target, tween.to.target, e);
@@ -191,6 +193,7 @@ function showScene(key) {
   }
   active = key;
   sceneButtons.forEach((b) => b.classList.toggle("active", b.dataset.scene === key));
+  hint.textContent = def.hint || HINT;
 
   viewBox.replaceChildren(
     ...Object.entries(def.views).map(([name, view]) => {
@@ -344,6 +347,97 @@ async function openingCard(key) {
   crossing = false;
 }
 
+// ---------- leaving: wireframe, the scene falls away, a goodbye card ----------
+
+const again = slate.querySelector(".slate-again");
+let ending = false;
+
+// runs fn(t) every frame for ms, t going 0 -> 1
+function animate(ms, fn) {
+  return new Promise((done) => {
+    const t0 = performance.now();
+    const tick = (now) => {
+      const t = Math.min((now - t0) / ms, 1);
+      fn(t);
+      if (t < 1) requestAnimationFrame(tick);
+      else done();
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+async function goodbye() {
+  const key = active;
+  const def = SCENES[key];
+  ending = crossing = true; // no clicks or doors while it plays
+  closeScan();
+  canvas.style.cursor = "";
+  document.body.classList.add("ending"); // the panels fade out
+  frame.hidden = true;
+  current = null;
+  viewBox.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+
+  // the camera rises behind the walker to watch it go
+  const fly = (v, dur) => {
+    tween = {
+      start: performance.now(),
+      dur,
+      from: { pos: camera.position.clone(), target: controls.target.clone(), fov: camera.fov },
+      to: { pos: new THREE.Vector3(...v.pos), target: new THREE.Vector3(...v.target), fov: v.fov },
+    };
+  };
+  fly(def.ending.view, 3000);
+  await wait(900);
+  setModel("wire");
+  // shadows would linger after the shapes are gone
+  built[key].traverse((obj) => {
+    if (!obj.isMesh) return;
+    obj.userData.castShadow ??= obj.castShadow;
+    obj.castShadow = false;
+  });
+  await wait(1600);
+
+  // everything breaks apart, from the far end of the school toward the gate,
+  // while the camera pulls back to take in the whole courtyard
+  dissolve.from.value.set(...def.ending.from);
+  if (def.ending.wide) fly(def.ending.wide, 6000);
+  await animate(7000, (t) => (dissolve.amount.value = t * t * (3 - 2 * t) * 1.02));
+  await wait(500);
+
+  slate.querySelector(".slate-number").textContent = "";
+  slate.querySelector(".slate-title").textContent = def.ending.title;
+  slate.querySelector(".slate-line").textContent = "";
+  slate.querySelector(".slate-photo").style.backgroundImage = "";
+  slate.classList.remove("instant");
+  slate.classList.add("farewell");
+  again.hidden = false;
+  slate.hidden = false;
+  slate.getBoundingClientRect();
+  slate.classList.add("show");
+}
+
+// back into the courtyard, rebuilt, with the walker where it started
+async function comeBack() {
+  const key = active;
+  const def = SCENES[key];
+  def.reset?.();
+  dissolve.amount.value = 0;
+  built[key].traverse((obj) => {
+    if (obj.isMesh && obj.userData.castShadow !== undefined) obj.castShadow = obj.userData.castShadow;
+  });
+  setModel("lowpoly");
+  goTo(def.ending.back || def.intro, true);
+  document.body.classList.remove("ending");
+  slate.classList.remove("show");
+  await wait(SLATE_OUT);
+  slate.hidden = true;
+  slate.classList.remove("farewell");
+  again.hidden = true;
+  ending = crossing = false;
+}
+
+again.addEventListener("click", comeBack);
+
 // ---------- clicking 3D-scanned objects ----------
 
 // a click is a press and release without dragging the view
@@ -355,15 +449,23 @@ canvas.addEventListener("pointerup", (e) => {
   if (moved > 5 || !active || intro || crossing || mode === "photo" || isOpen()) return;
   const hit = pick(built[active], camera, e.clientX, e.clientY, canvas);
   if (hit?.scan) openScan(hit.scan);
-  if (hit?.portal) enterPortal(hit.portal, hitPoint(e));
+  else if (hit?.portal) enterPortal(hit.portal, hitPoint(e));
+  // anything else goes to the scene (the main gate's walker)
+  else SCENES[active].click?.(hitsAt(e)[0] || null, ray.ray);
 });
 
-// the world point under the pointer, for the dolly toward a door
+// what's under the pointer, nearest first, skipping hidden groups and markers
 const ray = new THREE.Raycaster();
-function hitPoint(e) {
+const shown = (obj) => !obj || (obj.visible && shown(obj.parent));
+function hitsAt(e) {
   const r = canvas.getBoundingClientRect();
   ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
-  const hits = ray.intersectObjects(built[active].children, true);
+  return ray.intersectObjects(built[active].children, true).filter((h) => !h.object.isSprite && shown(h.object));
+}
+
+// the world point under the pointer, for the dolly toward a door
+function hitPoint(e) {
+  const hits = hitsAt(e);
   return hits.length ? hits[0].point : controls.target.clone();
 }
 // a pointing hand over anything that opens a scan
@@ -399,9 +501,9 @@ renderer.setAnimationLoop((now) => {
   if (!active) return;
   updateTween(now);
   controls.update();
-  SCENES[active].update?.(camera);
+  if (SCENES[active].update?.(camera, now) === "leave") goodbye();
   pulseMarkers(built[active], now);
-  controls.enabled = !isOpen();
+  controls.enabled = !isOpen() && !ending;
   renderer.render(built[active], camera);
   renderViewer(now);
 });

@@ -185,3 +185,43 @@ export function standingPerson(parent, x, z, turnDeg, shirt = "#2f3440", pants =
   addMesh(g, new THREE.IcosahedronGeometry(0.115, 0), mat("#3a2a22"), 0, 1.64, -0.02);
   return g;
 }
+
+// ---------- dissolve: lets a whole scene break apart and vanish ----------
+
+// shared by every material that has been made dissolvable. amount runs 0 -> 1:
+// at 0 nothing is cut; at 1 everything is gone. Small cells of the world vanish
+// at random, far from `from` first, so the scene falls away toward that point
+export const dissolve = {
+  amount: { value: 0 },
+  from: { value: new THREE.Vector3() },
+  radius: { value: 55 },
+};
+
+export function dissolvable(material) {
+  if (material.userData.dissolve) return material;
+  material.userData.dissolve = true;
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uDissolve = dissolve.amount;
+    shader.uniforms.uDissolveFrom = dissolve.from;
+    shader.uniforms.uDissolveRadius = dissolve.radius;
+    shader.vertexShader = shader.vertexShader
+      .replace("void main() {", "varying vec3 vDissolvePos;\nvoid main() {")
+      .replace("#include <project_vertex>", "#include <project_vertex>\nvDissolvePos = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "void main() {",
+      `uniform float uDissolve;
+uniform vec3 uDissolveFrom;
+uniform float uDissolveRadius;
+varying vec3 vDissolvePos;
+void main() {
+  if (uDissolve > 0.0) {
+    float noise = fract(sin(dot(floor(vDissolvePos / 0.35), vec3(12.9898, 78.233, 45.164))) * 43758.5453);
+    float near = 1.0 - clamp(distance(vDissolvePos.xz, uDissolveFrom.xz) / uDissolveRadius, 0.0, 1.0);
+    if (noise * 0.3 + near * 0.7 < uDissolve) discard;
+  }`,
+    );
+  };
+  material.customProgramCacheKey = () => "dissolve";
+  material.needsUpdate = true;
+  return material;
+}

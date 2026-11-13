@@ -186,16 +186,61 @@ export function standingPerson(parent, x, z, turnDeg, shirt = "#2f3440", pants =
   return g;
 }
 
-// ---------- dissolve: lets a whole scene break apart and vanish ----------
+// ---------- dissolve: lets a whole scene shatter and scatter ----------
 
 // shared by every material that has been made dissolvable. amount runs 0 -> 1:
-// at 0 nothing is cut; at 1 everything is gone. Small cells of the world vanish
-// at random, nearest `from` first, so the scene breaks apart outward from that point
+// at 0 nothing moves; at 1 everything is gone. Every triangle is a shard: shards
+// break loose nearest `from` first, so the scene shatters outward from that point.
+// Each shard bursts out and up, tumbles, shrinks, and vanishes partway through
 export const dissolve = {
   amount: { value: 0 },
   from: { value: new THREE.Vector3() },
   radius: { value: 55 },
 };
+
+const SHARD = `
+uniform float uDissolve;
+uniform vec3 uDissolveFrom;
+uniform float uDissolveRadius;
+attribute vec4 aCenter; // xyz: the triangle's centre, w: its size
+varying float vShatter;
+varying float vShard;
+vec3 shardHash(vec3 p) {
+  return fract(sin(vec3(dot(p, vec3(12.9898, 78.233, 45.164)), dot(p, vec3(39.346, 11.135, 83.155)), dot(p, vec3(73.156, 52.235, 9.151)))) * 43758.5453);
+}
+vec3 spin(vec3 v, vec3 axis, float a) {
+  return v * cos(a) + cross(axis, v) * sin(a) + axis * dot(axis, v) * (1.0 - cos(a));
+}
+`;
+
+// moves each vertex with its triangle's shard; runs after three.js has placed it
+const SHATTER = `
+vShatter = 0.0;
+vShard = 0.0;
+if (uDissolve > 0.0) {
+  vec3 centre = (modelMatrix * vec4(aCenter.xyz, 1.0)).xyz;
+  vec3 h = shardHash(floor(centre * 7.0) + aCenter.xyz);
+  float big = clamp(aCenter.w / 6.0, 0.0, 1.0); // big shards (walls, ground) tumble slower and shrink sooner
+  float far = clamp(distance(centre.xz, uDissolveFrom.xz) / uDissolveRadius, 0.0, 1.0);
+  float start = far * 0.72 + h.x * 0.28;
+  float p = clamp((uDissolve * 1.4 - start) / 0.4, 0.0, 1.0);
+  vShatter = p;
+  vShard = h.y;
+  if (p > 0.0) {
+    vec3 world = (modelMatrix * vec4(transformed, 1.0)).xyz;
+    vec2 out2 = centre.xz - uDissolveFrom.xz;
+    out2 = length(out2) > 0.01 ? normalize(out2) : vec2(h.y - 0.5, h.z - 0.5);
+    float burst = 1.0 - (1.0 - p) * (1.0 - p);
+    vec3 drift = vec3(out2.x * (3.0 + h.z * 7.0) + (h.y - 0.5) * 4.0,
+                      2.0 + h.y * 6.0 - p * p * 3.0,
+                      out2.y * (3.0 + h.z * 7.0) + (h.x - 0.5) * 4.0) * burst;
+    vec3 axis = normalize(h - 0.5 + vec3(0.001));
+    vec3 piece = spin(world - centre, axis, p * (2.0 + h.z * 6.0) * (1.0 - 0.85 * big)) * (1.0 - p * (0.6 + 0.4 * big));
+    mvPosition = viewMatrix * vec4(centre + drift + piece, 1.0);
+    gl_Position = projectionMatrix * mvPosition;
+  }
+}
+`;
 
 export function dissolvable(material) {
   if (material.userData.dissolve) return material;
@@ -205,23 +250,41 @@ export function dissolvable(material) {
     shader.uniforms.uDissolveFrom = dissolve.from;
     shader.uniforms.uDissolveRadius = dissolve.radius;
     shader.vertexShader = shader.vertexShader
-      .replace("void main() {", "varying vec3 vDissolvePos;\nvoid main() {")
-      .replace("#include <project_vertex>", "#include <project_vertex>\nvDissolvePos = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+      .replace("void main() {", `${SHARD}\nvoid main() {`)
+      .replace("#include <project_vertex>", `#include <project_vertex>\n${SHATTER}`);
+    // each shard vanishes at its own moment on the way out
     shader.fragmentShader = shader.fragmentShader.replace(
       "void main() {",
-      `uniform float uDissolve;
-uniform vec3 uDissolveFrom;
-uniform float uDissolveRadius;
-varying vec3 vDissolvePos;
+      `varying float vShatter;
+varying float vShard;
 void main() {
-  if (uDissolve > 0.0) {
-    float noise = fract(sin(dot(floor(vDissolvePos / 0.35), vec3(12.9898, 78.233, 45.164))) * 43758.5453);
-    float far = clamp(distance(vDissolvePos.xz, uDissolveFrom.xz) / uDissolveRadius, 0.0, 1.0);
-    if (noise * 0.3 + far * 0.7 < uDissolve) discard;
-  }`,
+  if (vShatter > 0.45 + 0.55 * vShard) discard;`,
     );
   };
-  material.customProgramCacheKey = () => "dissolve";
+  material.customProgramCacheKey = () => "shatter";
   material.needsUpdate = true;
   return material;
+}
+
+// gives a mesh one set of vertices per triangle, each knowing its triangle's centre,
+// so the dissolve can fling the triangles apart separately
+export function shatterable(mesh) {
+  let geo = mesh.geometry;
+  if (geo.userData.shatter) return;
+  if (geo.index) geo = geo.toNonIndexed();
+  const pos = geo.attributes.position;
+  const centre = new Float32Array(pos.count * 4);
+  const a = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  for (let i = 0; i + 2 < pos.count; i += 3) {
+    c.set(0, 0, 0);
+    for (let j = 0; j < 3; j++) c.add(a.fromBufferAttribute(pos, i + j));
+    c.divideScalar(3);
+    let size = 0;
+    for (let j = 0; j < 3; j++) size = Math.max(size, a.fromBufferAttribute(pos, i + j).distanceTo(c));
+    for (let j = 0; j < 3; j++) centre.set([c.x, c.y, c.z, size], (i + j) * 4);
+  }
+  geo.setAttribute("aCenter", new THREE.BufferAttribute(centre, 4));
+  geo.userData.shatter = true;
+  mesh.geometry = geo;
 }

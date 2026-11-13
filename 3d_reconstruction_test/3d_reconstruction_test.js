@@ -397,7 +397,7 @@ async function goodbye() {
   });
   await wait(1600);
 
-  // everything breaks apart, from the middle of the courtyard outward,
+  // everything shatters and scatters, from the middle of the courtyard outward,
   // while the camera pulls back to take in the whole courtyard
   dissolve.from.value.set(...def.ending.from);
   if (def.ending.wide) fly(def.ending.wide, 6000);

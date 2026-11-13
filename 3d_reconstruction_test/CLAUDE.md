@@ -22,7 +22,7 @@
 - `scenes/lowpoly.js`：所有场景共用的建模工具，包括 `box`、`cyl`、`bar`、`place`、`makeLayers`、`standingPerson`、`rand`/`reseed` 等。单位是米。
 - `scenes/old_gate.js`：场景 1 · Old Gate。点门可以进入 ID Studio（`userData.portal`）。
 - `scenes/id_studio.js`：场景 2 · ID Studio。
-- `scenes/main_gate.js`：场景 3 · Main Gate。围栏上有一扇可以走出去的门。院子里有一个可以点击移动的小人（白斗篷、深蓝长袍），会绕开花坛等障碍物，障碍物用 `blocked()` 登记。小人走出门后进入结局：场景先变成 wireframe，再从院子中间向外逐渐消解，最后显示 "Goodbye CCA"。
+- `scenes/main_gate.js`：场景 3 · Main Gate。围栏上有一扇可以走出去的门。院子里有一个可以点击移动的小人（白斗篷、深蓝长袍），会绕开花坛等障碍物，障碍物用 `blocked()` 登记。小人走出门后进入结局：场景先变成 wireframe，再从院子中间向外破碎散开，最后显示 "Goodbye CCA"。
 - `photos/`：网页上实际用到的参考照片，已经压缩过。
 - `models/`：扫描模型（`.glb`）。
 - `Space Media/`：原始素材，包括无人机视频、手机照片和视频，一共大约 650 MB。只用来参考，网页不会加载。不要读整个视频，也不要往里加文件。
@@ -36,7 +36,7 @@
 - `views`：相机视角。带 `photo` 的视角会对准原照片的拍摄位置，`fov` 和 `aspect` 按相机参数设置。
 - `build()`：先调用 `reseed(n)`，再按顺序构建场景。
 - 可选项：`hint`（右下角提示文字）；`click(hit, ray)`（点到的不是扫描物体或门时调用）；`update(camera, now)`（每帧调用，返回 `"leave"` 时主程序播放结局）；`ending`（结局的镜头、消解中心和标题）；`reset()`（点 "Walk back in" 后复原）。
-- 消解效果在 `lowpoly.js` 的 `dissolvable()` / `dissolve` 里，是共用的着色器，`dissolve.amount` 从 0 变到 1。
+- 破碎散开效果在 `lowpoly.js` 的 `dissolvable()`、`shatterable()`、`dissolve` 里。每个三角形是一块碎片，由共用的着色器推动；`dissolve.amount` 从 0 变到 1。
 
 用 `rand()` 的地方顺序很重要。在调用 `rand()` 的代码前面增加或删除东西，后面所有"随机"的树、车的样子都会跟着变。改动时要留意这一点。
 

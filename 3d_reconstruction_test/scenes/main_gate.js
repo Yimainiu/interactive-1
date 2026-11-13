@@ -14,6 +14,7 @@ import {
   makeLayers,
   standingPerson,
   dissolvable,
+  shatterable,
 } from "./lowpoly.js";
 
 /* ------------------------------------------------------------------
@@ -821,8 +822,8 @@ export default {
   intro: "drone",
   hint: "Click the paving to walk · click the gate to leave · drag to orbit",
   // walking out through the gate: the camera rises behind the walker, the scene turns
-  // to wireframe, then the camera pulls back over the courtyard while everything breaks
-  // apart from the middle of the courtyard outward; then the goodbye card
+  // to wireframe, then the camera pulls back over the courtyard while everything shatters
+  // and scatters, from the middle of the courtyard outward; then the goodbye card
   ending: {
     view: { pos: [-2, 10, -6], target: [3.9, 1.2, -26], fov: 45 },
     wide: { pos: [-4, 21, 26], target: [3, 0, -18], fov: 45 },
@@ -878,8 +879,12 @@ export default {
     buildStreets();
     blockWalls();
     buildWalker();
-    // every surface can break apart for the ending
-    scene.traverse((obj) => obj.isMesh && dissolvable(obj.material));
+    // every surface can shatter for the ending
+    scene.traverse((obj) => {
+      if (!obj.isMesh) return;
+      shatterable(obj);
+      dissolvable(obj.material);
+    });
     return scene;
   },
 

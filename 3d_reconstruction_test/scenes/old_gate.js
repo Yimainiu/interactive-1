@@ -43,11 +43,7 @@ const C = {
   leafA: "#7d6b45",
   leafB: "#8e7142",
   leafC: "#6c6d44",
-  young: "#97a052",
-  stake: "#b48a5a",
   mulch: "#5a4636",
-  pole: "#4f4033",
-  wire: "#2a2a2a",
   carGlass: "#2b333b",
   tyre: "#1f1f21",
   rack: "#2f8a4a",
@@ -218,7 +214,7 @@ function buildBuilding() {
 }
 
 /* ==================================================================
-   STREET: trees, pole, cars
+   STREET: trees, cars
 ================================================================== */
 
 // rusty-leaved street tree: trunk, two limbs, a few chunky blobs
@@ -238,39 +234,6 @@ function bigTree(x, z, s = 1) {
     blob.rotation.set(rand() * 3, rand() * 3, 0);
   }
   box(scene, 1.3, 0.02, 1.3, C.mulch, x, WALK.height, z);
-}
-
-// newly planted tree held up by two stakes
-function youngTree(x, z) {
-  const g = place(layers.trees, x, z, 0, WALK.height);
-  cyl(g, 0.04, 0.05, 2.7, 5, C.trunk, 0, 0, 0);
-  for (const sx of [-0.28, 0.28]) bar(g, [sx, 0, 0], [sx, 2.0, 0], 0.06, C.stake);
-  bar(g, [-0.28, 1.6, 0], [0.28, 1.6, 0], 0.05, C.stake);
-  addMesh(g, new THREE.IcosahedronGeometry(0.75, 0), mat(C.young), 0, 2.9, 0);
-  addMesh(g, new THREE.IcosahedronGeometry(0.5, 0), mat("#a8a75e"), 0.35, 3.4, 0.1);
-  box(scene, 1.2, 0.02, 1.8, C.mulch, x, WALK.height, z);
-}
-
-// overhead wire that dips in the middle
-function wire(a, b, sag) {
-  const at = (t) => [
-    a[0] + (b[0] - a[0]) * t,
-    a[1] + (b[1] - a[1]) * t - sag * Math.sin(Math.PI * t),
-    a[2] + (b[2] - a[2]) * t,
-  ];
-  for (let i = 0; i < 4; i++) {
-    bar(layers.power, at(i / 4), at((i + 1) / 4), 0.03, C.wire).castShadow = false;
-  }
-}
-
-function utilityPole(x, z) {
-  cyl(layers.power, 0.13, 0.18, 13, 7, C.pole, x, WALK.height, z);
-  cyl(layers.power, 0.2, 0.2, 1.8, 7, C.yellow, x, WALK.height, z);
-  bar(layers.power, [x - 1.2, 11.6, z], [x + 1.2, 11.6, z], 0.12, C.pole);
-  wire([x - 1.1, 11.7, z], [SITE.left, 11.4, z], 0.6);
-  wire([x + 1.1, 11.7, z], [SITE.right, 11.4, z], 0.6);
-  wire([x, 13, z], [SITE.right, 10.5, SITE.front - 4], 0.8);
-  wire([x + 1.1, 11.7, z], [SITE.right, 9.8, SITE.front - 2], 0.8);
 }
 
 function wheels(g, len, wid, r = 0.33) {
@@ -338,8 +301,6 @@ function buildStreet() {
   for (const x of [-31, -23.4, -15.5, -7.6, 10.8, 18.6, 26.4]) {
     bigTree(x, 2.75, 0.9 + rand() * 0.25);
   }
-  youngTree(1.5, 2.6);
-  utilityPole(5.2, 3.15);
 
   // street sign
   cyl(scene, 0.03, 0.03, 2.6, 5, "#8b8f92", -9.3, WALK.height, 3.25);
@@ -490,7 +451,6 @@ export default {
   layers: [
     { key: "cars", label: "Cars" },
     { key: "trees", label: "Trees" },
-    { key: "power", label: "Power lines" },
     { key: "people", label: "People" },
     { key: "camp", label: "Tents" },
     { key: "roof", label: "Roof gear" },

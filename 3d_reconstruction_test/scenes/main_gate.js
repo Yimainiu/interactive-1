@@ -47,6 +47,7 @@ const C = {
   concrete: "#c9c6bf",
   wood: "#c99a62",
   bleacher: "#6b5644",
+  slat: "#a9673d",
   timberGlass: "#3b4a50",
   siding: "#6e6560",
   darkGlass: "#2d3640",
@@ -71,7 +72,9 @@ const CCA = { x: -11.2, back: -40, z0: -25, z1: 34.9, ridgeZ: 2, ridge: 10.3, en
 const PLAZA = { x0: 12.3, x1: 40, z0: -11.6, z1: 34.9, y: 4.6 };
 const TIMBER = { x0: 9.5, x1: 30, z0: -30, z1: -11.6, floors: [0, 4.6, 8.0, 11.4, 14.8, 18.3] };
 const BRIDGE = { z0: 34.9, z1: 43, y: 4.6 };
-const BLEACH = { z0: 22.6, z1: 34.9, x1: 10.6, tiers: 10 };
+const BLEACH = { z0: 22.6, z1: 34.9, tiers: 10, stair: 1.5 };
+// the bleachers' courtyard edge runs on a diagonal, through (2.0, 24.5) and (5.8, 34)
+const bleachWest = (z) => 2.0 + ((z - 24.5) * 3.8) / 9.5;
 const WALK = { x1: -5.6, z0: -3, top: 0.5 }; // raised walk along the CCA facade, with 3 steps
 const BED = { x0: -1.48, x1: 4.6, z0: -2.29, z1: 8.07 };
 const SITE = { x0: -42, x1: 42, z0: -64, z1: 66 };
@@ -103,8 +106,9 @@ function buildGround() {
   box(scene, w, 0.12, 3, C.concrete, (SITE.x0 + SITE.x1) / 2, 0, COURT.z0 - 1.5);
   box(scene, w, 0.02, 12, C.asphalt, (SITE.x0 + SITE.x1) / 2, 0, COURT.z0 - 9);
   box(scene, w, 0.12, 3, C.concrete, (SITE.x0 + SITE.x1) / 2, 0, COURT.z0 - 16.5);
-  // the street past the bridge end, where the drone saw parked cars
-  box(scene, w, 0.02, 12, C.asphalt, (SITE.x0 + SITE.x1) / 2, 0, 59);
+  // past the bridge and the plaza's edge: sidewalk, then the street where the drone saw parked cars
+  box(scene, w, 0.12, 3, C.concrete, (SITE.x0 + SITE.x1) / 2, 0, BRIDGE.z1 + 1.5);
+  box(scene, w, 0.02, 12, C.asphalt, (SITE.x0 + SITE.x1) / 2, 0, BRIDGE.z1 + 9);
 
   // the raised walk along the CCA facade and its three steps down to the courtyard
   const wz = COURT.z1 - WALK.z0;
@@ -245,11 +249,14 @@ function buildPlaza() {
   box(scene, x1 - x0, y, z1 - z0, C.concrete, (x0 + x1) / 2, 0, (z0 + z1) / 2);
   // the building under the plaza fronts the courtyard: board-formed concrete, dark windows, doors
   const front = batch();
-  for (let z = z0 + 3; z < z1 - 6; z += 7) {
+  // (they stop short of the bleachers, which stand against the wall's last stretch)
+  for (let z = z0 + 3; z < BLEACH.z0 - 6; z += 7) {
     front.box(0.05, 2.4, 3.6, C.darkGlass, x0 - 0.03, 0.4, z + 1.8);
     front.box(0.06, 0.12, 3.8, "#8f9396", x0 - 0.04, 2.8, z + 1.8);
   }
-  for (const z of [-4.2, 9.8, 23.8]) front.box(0.05, 2.5, 1.8, "#3a4048", x0 - 0.035, 0, z);
+  front.box(0.05, 2.4, 2.4, C.darkGlass, x0 - 0.03, 0.4, 20.4);
+  front.box(0.06, 0.12, 2.6, "#8f9396", x0 - 0.04, 2.8, 20.4);
+  for (const z of [-4.2, 9.8, 17.6]) front.box(0.05, 2.5, 1.8, "#3a4048", x0 - 0.035, 0, z);
   front.addTo(scene);
   facetedGround(scene, x1 - x0, z1 - z0, C.plaza, (x0 + x1) / 2, (z0 + z1) / 2, 3, 0.05).position.y = y + 0.005;
   // triangle pattern in the paving
@@ -286,15 +293,18 @@ function buildPlaza() {
   }
   lines.addTo(scene);
   // the planted lawn, half a metre up
-  box(layers.plants, 11, 0.5, 21.5, C.lawn, 23.5, y, 24);
+  box(layers.plants, 13.5, 0.5, 21.5, C.lawn, 22.25, y, 24);
 
-  // railing along the courtyard edge: steel panels between concrete blocks
+  // railing along the courtyard edge: steel panels between concrete blocks,
+  // then a solid concrete parapet above the bleachers
   const rail = batch();
-  for (let z = z0 + 0.5; z < z1 - 0.5; z += 2.0) {
-    rail.box(0.05, 1.0, 0.05, "#9aa0a3", x0 + 0.15, y, z);
-    rail.box(0.04, 0.04, 2.0, "#9aa0a3", x0 + 0.15, y + 1.0, z + 1.0);
+  let railEnd = z0 + 0.5;
+  for (; railEnd < BLEACH.z0 - 2; railEnd += 2.0) {
+    rail.box(0.05, 1.0, 0.05, "#9aa0a3", x0 + 0.15, y, railEnd);
+    rail.box(0.04, 0.04, 2.0, "#9aa0a3", x0 + 0.15, y + 1.0, railEnd + 1.0);
   }
-  for (let z = z0 + 4; z < z1; z += 9) rail.box(0.5, 1.0, 1.4, C.concrete, x0 + 0.25, y, z);
+  for (let z = z0 + 4; z < railEnd; z += 9) rail.box(0.5, 1.0, 1.4, C.concrete, x0 + 0.25, y, z);
+  rail.box(0.3, 1.0, z1 - railEnd, C.concrete, x0 + 0.15, y, (railEnd + z1) / 2);
   rail.addTo(scene, true);
 
   // banners standing on the plaza
@@ -321,34 +331,83 @@ function buildBridge() {
   box(scene, x1 - x0, 0.6, z1 - z0, C.concrete, (x0 + x1) / 2, y - 0.6, (z0 + z1) / 2);
   facetedGround(scene, x1 - x0, z1 - z0, C.plaza, (x0 + x1) / 2, (z0 + z1) / 2, 3, 0.05).position.y = y + 0.005;
   for (let x = x0 + 3; x < x1; x += 6) box(scene, 0.5, y - 0.6, 0.5, C.concrete, x, 0, z0 + 0.6);
-  box(scene, x1 - x0, 1.0, 0.25, C.concrete, (x0 + x1) / 2, y, z0 + 0.15); // parapet
+  // parapet on the courtyard side, up to where the bleachers' stair arrives
+  const stairTop = bleachWest(BLEACH.z1);
+  box(scene, stairTop - x0, 1.0, 0.25, C.concrete, (x0 + stairTop) / 2, y, z0 + 0.15);
   box(scene, 2.6, 0.9, 0.05, C.trim, 1.5, y - 1.5, z0 - 0.03); // red sign on the fascia
-  // dark back wall of the passage, then a low building beyond it
+  // dark back wall of the passage; across the street, a low building
   box(scene, x1 - x0, y - 0.6, 0.3, "#3d3f43", (x0 + x1) / 2, 0, z1 - 1);
-  box(layers.neighbours, 50, 6.5, 8, "#3f4145", -4, 0, z1 + 4.5);
-  box(layers.neighbours, 50, 0.4, 8.2, C.trim, -4, 5.0, z1 + 4.5);
+  box(layers.neighbours, 50, 6.5, 7.5, "#3f4145", -4, 0, z1 + 19.25);
+  box(layers.neighbours, 50, 0.4, 7.7, C.trim, -4, 5.0, z1 + 19.25);
 }
 
-// the bleachers rising from the courtyard to the bridge, and the stair beside them
+// black lamp post
+function lamp(x, y, z) {
+  cyl(scene, 0.05, 0.07, 4.4, 5, C.black, x, y, z);
+  box(scene, 0.16, 0.34, 0.16, C.black, x + 0.18, y + 3.9, z);
+}
+
+// the plaza carries on beside the bridge to the street: a walk past the lawn,
+// a planted strip, and concrete slabs standing along the edge above the sidewalk.
+// (Built last: its paving and grass use rand(), and nothing after it should change.)
+function buildStreetEdge() {
+  const { x0, x1, y } = PLAZA;
+  const { z0, z1 } = BRIDGE;
+  box(scene, x1 - x0, y, z1 - z0, C.concrete, (x0 + x1) / 2, 0, (z0 + z1) / 2);
+  facetedGround(scene, x1 - x0, z1 - z0, C.plaza, (x0 + x1) / 2, (z0 + z1) / 2, 3, 0.05).position.y = y + 0.005;
+  plantedBed(x0 + 1.2, x1 - 2, z1 - 2.8, z1 - 0.6, 240, y);
+  const slabs = batch();
+  for (let x = COURT.x0 + 0.2; x < x1 - 2.4; x += 2.8) slabs.box(2.4, 1.3, 0.3, C.concrete, x + 1.2, y, z1 - 0.15);
+  slabs.addTo(scene, true);
+  for (const [x, z] of [[x0 + 1.2, 25.5], [x0 + 1.2, 33.8], [24, z1 - 3.2]]) lamp(x, y, z);
+}
+
+// a flat-topped block standing on the floor, from its outline on the ground: [[x, z], ...]
+function prism(points, h) {
+  const geo = new THREE.ExtrudeGeometry(new THREE.Shape(points.map(([x, z]) => new THREE.Vector2(x, -z))), { depth: h, bevelEnabled: false });
+  return geo.rotateX(-Math.PI / 2);
+}
+
+// the bleachers in the corner between the plaza wall and the bridge: wooden tiers
+// against the wall, and on their courtyard side a stair with a landing halfway,
+// closed in below by a face of wooden slats
 function buildBleachers() {
-  const { z0, z1, x1, tiers } = BLEACH;
-  const depth = (z1 - z0) / tiers;
-  const rise = BRIDGE.y / tiers;
+  const { z0, z1, tiers, stair } = BLEACH;
+  const wall = COURT.x1;
+  const top = BRIDGE.y;
   const parts = batch();
   for (let k = 0; k < tiers; k++) {
-    const zf = z0 + k * depth;
-    // the west edge runs on a diagonal, from (2.0, 24.5) to (5.8, 34)
-    const xw = Math.max(2.0, 2.0 + ((zf - 24.5) * 3.8) / 9.5);
-    parts.box(x1 - xw, rise * (k + 1), z1 - zf, C.bleacher, (xw + x1) / 2, 0, (zf + z1) / 2);
+    const zf = z0 + (k * (z1 - z0)) / tiers;
+    parts.add(prism([[bleachWest(zf) + stair, zf], [wall, zf], [wall, z1], [bleachWest(z1) + stair, z1]], (top * (k + 1)) / tiers), C.bleacher);
   }
-  // stair at the east end: twice the risers, a handrail each side
-  const n = tiers * 2;
-  for (let k = 0; k < n; k++) {
-    const zf = z0 + (k * (z1 - z0)) / n;
-    parts.box(COURT.x1 - x1, (BRIDGE.y * (k + 1)) / n, z1 - zf, C.concrete, (x1 + COURT.x1) / 2, 0, (zf + z1) / 2);
+  // the stair: two flights of ten risers with a landing between them
+  const n = 20;
+  const landing = 1.5;
+  const tread = (z1 - z0 - landing) / n;
+  const start = (i) => z0 + i * tread + (i > n / 2 ? landing : 0); // where step i begins (i = n: the top)
+  for (let i = 0; i < n; i++) {
+    const a = start(i);
+    const b = start(i + 1);
+    parts.add(prism([[bleachWest(a), a], [bleachWest(a) + stair, a], [bleachWest(b) + stair, b], [bleachWest(b), b]], (top * (i + 1)) / n), C.darkPaving);
+  }
+  // slats standing along the stair's outer face
+  const turn = Math.atan2(3.8, 9.5);
+  for (let i = 1; i < n; i++) {
+    const h = (top * (i + 1)) / n - 0.06;
+    for (let z = start(i) + 0.13; z < start(i + 1); z += 0.27) {
+      const slat = new THREE.BoxGeometry(0.04, h, 0.19).rotateY(turn);
+      parts.add(slat.translate(bleachWest(z) - 0.03, h / 2, z), C.slat);
+    }
   }
   parts.addTo(scene, true);
-  for (const x of [x1 + 0.05, COURT.x1 - 0.1]) bar(scene, [x, 1.0, z0], [x, BRIDGE.y + 1.0, z1], 0.05, C.black);
+  // a handrail each side: up the first flight, along the landing, up the second
+  const mid = start(n / 2);
+  const run = [[z0, top * 0.05], [mid, top * 0.55], [mid + landing + tread, top * 0.55], [z1, top]].map(([z, y]) => [z, y + 1.0]);
+  for (const dx of [0.05, stair - 0.05]) {
+    const pts = run.map(([z, y]) => [bleachWest(z) + dx, y, z]);
+    for (let i = 0; i < 3; i++) bar(scene, pts[i], pts[i + 1], 0.05, C.black);
+    for (const [x, y, z] of pts) bar(scene, [x, y - 1.0, z], [x, y, z], 0.05, C.black);
+  }
 }
 
 // a plain block with bands of windows, for the neighbours
@@ -375,9 +434,9 @@ function buildNeighbours() {
    COURTYARD: bed, trees, hedge, fence, signs
 ================================================================== */
 
-// a raised bed packed with grass tufts
-function plantedBed(x0, x1, z0, z1, tufts) {
-  box(layers.plants, x1 - x0, 0.4, z1 - z0, "#4a5a3a", (x0 + x1) / 2, 0, (z0 + z1) / 2);
+// a raised bed packed with grass tufts, standing on the floor or (y) on the plaza
+function plantedBed(x0, x1, z0, z1, tufts, y = 0) {
+  box(layers.plants, x1 - x0, 0.4, z1 - z0, "#4a5a3a", (x0 + x1) / 2, y, (z0 + z1) / 2);
   const grass = batch();
   const colors = [C.grassA, C.grassB, C.grassC, C.grassD];
   for (let i = 0; i < tufts; i++) {
@@ -386,7 +445,7 @@ function plantedBed(x0, x1, z0, z1, tufts) {
     const h = 0.35 + rand() * 0.45;
     const tuft = new THREE.ConeGeometry(0.25 + rand() * 0.15, h, 5);
     tuft.rotateY(rand() * Math.PI);
-    tuft.translate(x, 0.4 + h / 2, z);
+    tuft.translate(x, y + 0.4 + h / 2, z);
     grass.add(tuft, colors[Math.floor(rand() * colors.length)]);
   }
   grass.addTo(layers.plants);
@@ -793,7 +852,7 @@ function buildStreets() {
   }
   // past the bridge: the cars the drone saw, parked along the street
   for (const [x, color] of [[-3.4, "#e9ebeb"], [-8.6, "#e9ebeb"], [-13.1, "#f2f2f0"], [-18.8, "#e9ebeb"], [-26, "#c3c6ca"], [4, "#a4a8ad"], [10, "#1f2328"]]) {
-    car(x, 61, 0, color, x === -13.1 ? 5.9 : 4.6);
+    car(x, BRIDGE.z1 + 4.6, 0, color, x === -13.1 ? 5.9 : 4.6);
   }
 }
 
@@ -879,6 +938,7 @@ export default {
     buildStreets();
     blockWalls();
     buildWalker();
+    buildStreetEdge();
     // every surface can shatter for the ending
     scene.traverse((obj) => {
       if (!obj.isMesh) return;

@@ -580,7 +580,7 @@ export default {
   mood: {
     sky: { top: "#7d8a97", horizon: "#c0c9d0", ground: "#aab3ba" },
     fog: { color: "#bac3ca", near: 14, far: 130, ref: 45 },
-    grade: { tint: "#f3f7ff", saturation: 0.8, grain: 0.08, vignette: 0.38 },
+    grade: { tint: "#f3f7ff", saturation: 0.8, grain: 0.08, vignette: 0.38, ink: "#1d2530", line: 0.9 },
   },
   views: {
     // DJI drone camera: 24 mm equiv., 16:9 photos

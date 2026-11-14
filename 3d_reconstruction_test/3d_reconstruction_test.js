@@ -608,7 +608,7 @@ renderer.setAnimationLoop((now) => {
   const amb = SCENES[active].ambience;
   const on = amb && !crossing && !document.hidden && (!amb.layer || built[active].userData.layers[amb.layer].visible);
   setAmbience(on ? amb.sound : null);
-  const mood = atmosphere.render(built[active], camera, camera.position.distanceTo(controls.target));
+  const mood = atmosphere.render(built[active], camera, camera.position.distanceTo(controls.target), modelMode === "lowpoly");
   document.body.classList.toggle("dark", mood.dark); // pale text over a dark picture
   renderViewer(now);
 });

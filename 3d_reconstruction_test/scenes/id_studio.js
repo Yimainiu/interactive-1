@@ -891,7 +891,7 @@ const events = []; // waiting to be handed to the page, one per frame
 const mood = {
   sky: { top: col("#000"), horizon: col("#000"), ground: col("#000") },
   fog: { color: col("#000"), near: 9, far: 70, ref: 12 },
-  grade: { tint: col("#fff"), saturation: 1, grain: 0.08, vignette: 0.4 },
+  grade: { tint: col("#fff"), saturation: 1, grain: 0.08, vignette: 0.4, ink: "#2a1b17", line: 0.8 },
   dark: true, // even at dusk the room is dim enough for pale text
 };
 

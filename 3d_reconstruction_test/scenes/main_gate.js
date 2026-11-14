@@ -907,7 +907,7 @@ export default {
   mood: {
     sky: { top: "#9cc4de", horizon: "#e9f1ee", ground: "#d3e0e4" },
     fog: { color: "#dde8ec", near: 45, far: 240, ref: 60 },
-    grade: { tint: "#f6faff", saturation: 0.95, grain: 0.07, vignette: 0.3 },
+    grade: { tint: "#f6faff", saturation: 0.95, grain: 0.07, vignette: 0.3, ink: "#25303a", line: 0.8 },
   },
   hint: "Click the paving to walk · click the gate to leave · drag to orbit",
   // walking out through the gate: the camera rises behind the walker, the scene turns

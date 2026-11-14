@@ -27,7 +27,7 @@ An interactive poem — documenting an industrial design student’s life at CCA
 - `3d_reconstruction_test.js`：主程序，负责渲染器、相机、视角切换、照片和模型的切换、面板，以及点门进入下一个场景（portal）。
 - `3d_reconstruction_test.css`：样式。
 - 开场顺序：先在白屏上显示项目名（`PROJECT`，在主程序里），淡出后换成第 1 幕的标题卡，停住等点击（或按 Enter / 空格）才进入场景。直接带视角的链接（如 `#gate/street`）会跳过开场。
-- `atmosphere.js`：三个场景共用的画面风格。给每个场景加天空穹顶和雾，再把整幅画面"印"到屏幕上：调色、降饱和、纸的纤维和颗粒、四角压暗。每个场景用自己的 `mood` 描述天气，这里每帧读取一次。
+- `atmosphere.js`：三个场景共用的画面风格。给每个场景加天空穹顶和雾，再把整幅画面"印"到屏幕上：调色、降饱和、手绘描边、纸的纤维和颗粒、四角压暗。描边是根据画面的深度找出轮廓和折线，再画成略微抖动、深浅不匀的墨线（外加一道更淡的复线）；线框模式下不画。每个场景用自己的 `mood` 描述天气，这里每帧读取一次。
 - `ambience.js`：在浏览器里实时合成的环境声，不用音频文件：`rain`（雨声）、`room`（傍晚空楼里的低鸣）、`morning`（清晨的鸟叫和一点风）。浏览器要求先有点击或按键才能出声，所以第一次点击时才会启动；每种声音第一次用到时才生成。
 - `scans.js`：3D 扫描弹窗。场景里只要有物体带 `userData.scan = { src, title, note }`，就会出现发光的小点，点开后加载对应的 `.glb`。带 `userData.marker = true` 的物体也有同样的小点（配合 `userData.action`，点击交给场景自己的 `click()` 处理），场景可以用 `obj.userData.dot.visible` 把小点藏起来。
 - `#caption`：屏幕下方的一行"诗句"（时刻加一句话），由场景在时间推进时发出。
@@ -47,7 +47,7 @@ An interactive poem — documenting an industrial design student’s life at CCA
 - `layers: [{ key, label }]`：对应面板 Show 下面的复选框。物体建在 `layers.<key>` 里就能被这个复选框开关。要删掉一个选项，就把这一项和所有用到它的代码一起删掉。
 - `views`：相机视角。带 `photo` 的视角会对准原照片的拍摄位置，`fov` 和 `aspect` 按相机参数设置。
 - `build()`：先调用 `reseed(n)`，再按顺序构建场景。场景自己建灯光。
-- `mood`：这个场景的天气，交给 `atmosphere.js`。包括 `sky`（`top` / `horizon` / `ground` 三个颜色）、`fog`（`color`、`near`、`far`，以及 `ref`：这组雾是按相机离目标多远调的，拉远时雾会自动后退）、`grade`（`tint`、`saturation`、`grain`、`vignette`）和 `dark`（画面很暗时设为 true，页面上的散字会变成浅色）。场景可以在运行中改这个对象（工作室就是这样从傍晚变到夜里）。
+- `mood`：这个场景的天气，交给 `atmosphere.js`。包括 `sky`（`top` / `horizon` / `ground` 三个颜色）、`fog`（`color`、`near`、`far`，以及 `ref`：这组雾是按相机离目标多远调的，拉远时雾会自动后退）、`grade`（`tint`、`saturation`、`grain`、`vignette`，以及描边的颜色 `ink` 和强度 `line`，`line: 0` 就是不描边）和 `dark`（画面很暗时设为 true，页面上的散字会变成浅色）。场景可以在运行中改这个对象（工作室就是这样从傍晚变到夜里）。
 - 可选项：`ambience: { sound, layer }`（场景在屏幕上时播放的环境声；写了 `layer` 就只在这个图层打开时播放）；`hint`（右下角提示文字）；`enter()`（每次场景出现在屏幕上时调用）；`click(hit, ray, picked)`（点到的不是扫描物体或门时调用，`picked.action` 是点到的物体的 `userData.action`）；`update(camera, now)`（每帧调用）；`ending`（结局的镜头、消解中心和标题）；`reset()`（点 "Walk back in" 后复原）。
 - `update()` 的返回值：`"leave"` 让主程序播放结局；也可以返回一个事件对象，一帧一个：`{ caption: { time, line } }`（显示字幕）、`{ hint }`（换右下角提示）、`{ look: [x, y, z] }`（如果这个点不在画面里，镜头转过去）、`{ to: "main" }`（经过标题卡跳到另一个场景）。
 - 破碎散开效果在 `lowpoly.js` 的 `dissolvable()`、`shatterable()`、`dissolve` 里。每个三角形是一块碎片，由共用的着色器推动；`dissolve.amount` 从 0 变到 1。

@@ -32,9 +32,9 @@ An interactive poem — documenting an industrial design student’s life at CCA
 - `scans.js`：3D 扫描弹窗。场景里只要有物体带 `userData.scan = { src, title, note }`，就会出现发光的小点，点开后加载对应的 `.glb`。带 `userData.marker = true` 的物体也有同样的小点（配合 `userData.action`，点击交给场景自己的 `click()` 处理），场景可以用 `obj.userData.dot.visible` 把小点藏起来。
 - `#caption`：屏幕下方的一行"诗句"（时刻加一句话），由场景在时间推进时发出。
 - `scenes/lowpoly.js`：所有场景共用的建模工具，包括 `box`、`cyl`、`bar`、`place`、`makeLayers`、`standingPerson`、`rand`/`reseed` 等。单位是米。
-- `scenes/old_gate.js`：场景 1 · Old Gate，雨天。点门可以进入 ID Studio（`userData.portal`）。场景里在下雨（雨丝和地面水花，`buildRain()` / `stepRain()`），属于 "Rain" 图层；这个图层打开时会播放雨声。地面是湿的，有积水（`buildPuddles()`）；门和一部分二楼窗户亮着暖光。
-- `scenes/id_studio.js`：场景 2 · ID Studio，从傍晚开始。桌上有三样可以点的东西（草图、显示器、3D 打印机），每点一样时间就往夜里走一步（傍晚 → 蓝调时刻 → 夜晚），并显示一行字幕。天全黑以后吊灯上出现小点，点亮它表示已经深夜，几秒后经过标题卡跳到 Main Gate。整套逻辑在文件末尾的 TIME 部分（`HOURS`、`useThing()`、`stepEvening()`）；每次进入场景都会回到傍晚（`enter()`）。
-- `scenes/main_gate.js`：场景 3 · Main Gate，清晨：太阳还低，在桥的后面，影子很长，远处有薄雾；旗子和小树会轻轻晃动（`stir()`）。围栏上有一扇可以走出去的门。院子里有一个可以点击移动的小人（白斗篷、深蓝长袍），会绕开花坛等障碍物，障碍物用 `blocked()` 登记。小人走出门后进入结局：场景先变成 wireframe，再从院子中间向外破碎散开，最后显示 "Goodbye CCA"。
+- `scenes/old_gate.js`：场景 1 · Old Gate，雨天。点门可以进入 ID Studio（`userData.portal`）。场景里在下雨（雨丝和地面水花，`buildRain()` / `stepRain()`），属于 "Rain" 图层；这个图层打开时会播放雨声。地面是湿的，有积水（`buildPuddles()`）；门和一部分二楼窗户亮着暖光；行道树随风轻晃。
+- `scenes/id_studio.js`：场景 2 · ID Studio，从傍晚开始。桌上有三样可以点的东西（草图、显示器、3D 打印机），每点一样时间就往夜里走一步（傍晚 → 蓝调时刻 → 夜晚），并显示一行字幕。天全黑以后吊灯上出现小点，点亮它表示已经深夜（灯亮起时会闪几下），几秒后经过标题卡跳到 Main Gate。整套逻辑在文件末尾的 TIME 部分（`HOURS`、`useThing()`、`stepEvening()`）；每次进入场景都会回到傍晚（`enter()`）。
+- `scenes/main_gate.js`：场景 3 · Main Gate，清晨：太阳还低，在桥的后面，影子很长，远处有薄雾；旗子、小树和花坛里的草会轻轻晃动（`stir()`）。围栏上有一扇可以走出去的门。院子里有一个可以点击移动的小人（白斗篷、深蓝长袍），会绕开花坛等障碍物，障碍物用 `blocked()` 登记。小人走出门后进入结局：场景先变成 wireframe，再从院子中间向外破碎散开，最后显示 "Goodbye CCA"。
 - `photos/`：网页上实际用到的参考照片，已经压缩过。
 - `models/`：扫描模型（`.glb`）。
 - `Space Media/`：原始素材，包括无人机视频、手机照片和视频，一共大约 650 MB。只用来参考，网页不会加载。不要读整个视频，也不要往里加文件。

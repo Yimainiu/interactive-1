@@ -883,6 +883,7 @@ const HOLD = 6500; // ms the lit lamp is held before the morning
 let time = 0; // 0 dusk -> 1 night
 let used = new Set();
 let lampOn = 0; // ms when it was switched on, or 0
+let handedOver = false; // the scene has asked for the morning
 let lampReady = false; // night has fallen and the lamp's dot is showing
 let level = { sketches: 0, monitor: 0, printer: 0, lamp: 0 }; // each thing easing on, 0 -> 1
 let painted = -1; // the time the windows were last painted for
@@ -910,6 +911,7 @@ function startEvening() {
   time = 0;
   used = new Set();
   lampOn = 0;
+  handedOver = false;
   lampReady = false;
   level = { sketches: 0, monitor: 0, printer: 0, lamp: 0 };
   painted = -1;
@@ -992,8 +994,13 @@ function stepEvening(now) {
     parts.printer.head.position.x = Math.sin(t * 2.3) * 0.11;
     parts.printer.spool.rotation.y = t * 0.6;
   }
-  parts.lamp.material.emissiveIntensity = 0.05 + level.lamp * 0.9;
-  L.lamp.intensity = level.lamp * 8;
+  // an old bulb: it stutters as it comes on, then dips for a moment now and then
+  const since = (now - lampOn) / 1000;
+  const stutter = since < 0.12 || (since > 0.24 && since < 0.32) || since > 0.5 ? 1 : 0.12;
+  const dip = Math.sin(since * 2.1) * Math.sin(since * 5.3 + 1) > 0.88 ? 0.72 : 1;
+  const bulb = level.lamp * stutter * dip;
+  parts.lamp.material.emissiveIntensity = 0.05 + bulb * 0.9;
+  L.lamp.intensity = bulb * 8;
 
   // dust drifting
   const seed = dust.userData.seed;
@@ -1007,8 +1014,8 @@ function stepEvening(now) {
   }
 
   // the lamp has been on a while: it is long past midnight, and then it is morning
-  if (lampOn && now - lampOn > HOLD) {
-    lampOn = Infinity; // only once
+  if (lampOn && !handedOver && now - lampOn > HOLD) {
+    handedOver = true;
     events.push({ to: "main" });
   }
 }

@@ -84,6 +84,7 @@ let scene;
 let layers; // groups the panel can show or hide
 let banners = []; // they stir in the morning air
 let trees = [];
+let grasses = []; // { mesh, top }: the tufts of a planted bed, and the height they grow from
 
 // top of the CCA facade at z: it peaks over the entrance and falls to both ends
 function ccaTop(z) {
@@ -458,7 +459,7 @@ function plantedBed(x0, x1, z0, z1, tufts, y = 0) {
     tuft.translate(x, y + 0.4 + h / 2, z);
     grass.add(tuft, colors[Math.floor(rand() * colors.length)]);
   }
-  grass.addTo(layers.plants);
+  for (const mesh of grass.addTo(layers.plants)) grasses.push({ mesh, top: y + 0.4 });
 }
 
 // young tree: thin trunk, a few leafy blobs; s scales it (s = 1 is about 4 m tall)
@@ -887,7 +888,8 @@ function buildLights() {
   scene.add(fill);
 }
 
-// the morning air: banners turn a little on their poles, the young trees sway
+// the morning air: banners turn a little on their poles, the young trees sway,
+// and the grass leans over in waves that cross the beds
 function stir(now) {
   const t = now / 1000;
   banners.forEach((b, i) => (b.rotation.y = Math.sin(t * 1.3 + i * 1.7) * 0.22 + Math.sin(t * 3.1 + i) * 0.06));
@@ -895,6 +897,18 @@ function stir(now) {
     g.rotation.z = Math.sin(t * 0.8 + i * 2.1) * 0.012;
     g.rotation.x = Math.sin(t * 0.6 + i * 1.3) * 0.009;
   });
+  for (const grass of grasses) {
+    const pos = grass.mesh.geometry.attributes.position;
+    const rest = (grass.rest ??= pos.array.slice()); // where every point stands in still air
+    for (let i = 0; i < rest.length; i += 3) {
+      const lift = rest[i + 1] - grass.top; // only the tips move; the foot of a tuft stays put
+      if (lift < 0.02) continue;
+      const lean = lift * (0.1 * Math.sin(t * 1.7 + rest[i] * 1.3 + rest[i + 2] * 0.7) + 0.04 * Math.sin(t * 3.3 + rest[i + 2] * 2.1));
+      pos.array[i] = rest[i] + lean;
+      pos.array[i + 2] = rest[i + 2] + lean * 0.5;
+    }
+    pos.needsUpdate = true;
+  }
 }
 
 export default {
@@ -958,6 +972,7 @@ export default {
     layers = makeLayers(scene, this.layers);
     banners = [];
     trees = [];
+    grasses = [];
     buildLights();
     buildGround();
     buildCCA();

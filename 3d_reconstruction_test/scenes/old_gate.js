@@ -60,6 +60,7 @@ const DOOR = { w: 3.4, h: 3.3, depth: 0.6 }; // the recessed entrance bay
 
 let scene;
 let layers; // groups the panel can show or hide
+let trees = []; // they move in the wind that slants the rain
 
 /* ==================================================================
    GROUND
@@ -233,6 +234,7 @@ function buildBuilding() {
 // rusty-leaved street tree: trunk, two limbs, a few chunky blobs
 function bigTree(x, z, s = 1) {
   const g = place(layers.trees, x, z, rand() * 360, WALK.height);
+  trees.push(g);
   cyl(g, 0.12 * s, 0.17 * s, 2.7 * s, 6, C.trunk, 0, 0, 0);
   bar(g, [0, 2.3 * s, 0], [0.8 * s, 3.7 * s, 0.2 * s], 0.14 * s, C.trunk);
   bar(g, [0, 2.5 * s, 0], [-0.7 * s, 3.9 * s, -0.3 * s], 0.13 * s, C.trunk);
@@ -595,6 +597,7 @@ export default {
     reseed(7);
     scene = new THREE.Scene();
     layers = makeLayers(scene, this.layers);
+    trees = [];
     buildLights();
     buildGround();
     buildBuilding();
@@ -607,5 +610,11 @@ export default {
   // called every frame
   update(camera, now) {
     stepRain(now);
+    // the trees lean with the gusts and come back
+    const t = now / 1000;
+    trees.forEach((g, i) => {
+      g.rotation.z = Math.sin(t * 0.9 + i * 1.9) * 0.012 + Math.sin(t * 2.3 + i) * 0.004;
+      g.rotation.x = Math.sin(t * 0.7 + i * 1.1) * 0.008;
+    });
   },
 };

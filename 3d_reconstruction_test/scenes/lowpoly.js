@@ -110,13 +110,17 @@ export function batch() {
       if (!parts.has(color)) parts.set(color, []);
       parts.get(color).push(geo.index ? geo.toNonIndexed() : geo);
     },
+    // returns the meshes it made, one per colour
     addTo(parent, castShadow = false) {
+      const meshes = [];
       for (const [color, geos] of parts) {
         const mesh = new THREE.Mesh(mergeGeometries(geos), mat(color));
         mesh.castShadow = castShadow;
         mesh.receiveShadow = true;
         parent.add(mesh);
+        meshes.push(mesh);
       }
+      return meshes;
     },
   };
 }

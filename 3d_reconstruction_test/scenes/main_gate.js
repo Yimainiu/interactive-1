@@ -179,6 +179,13 @@ function buildCCA() {
   }
   roof.addTo(scene, true);
 
+  // the building carries on beside the bridge to the street: plain white wall,
+  // with a door onto the bridge deck
+  const ez = (CCA.z1 + BRIDGE.z1) / 2;
+  box(scene, CCA.x - CCA.back, CCA.end1, BRIDGE.z1 - CCA.z1, C.white, (CCA.x + CCA.back) / 2, 0, ez);
+  box(scene, CCA.x - CCA.back, 0.06, BRIDGE.z1 - CCA.z1, C.roof, (CCA.x + CCA.back) / 2, CCA.end1, ez);
+  box(scene, 0.06, 2.2, 1.1, "#3a4048", CCA.x + 0.03, BRIDGE.y, BRIDGE.z1 - 2.6);
+
   // facade: lower windows 0.65-3.0 m, upper glass band 3.6-7.8 m, red mullions
   const fx = CCA.x;
   const len = CCA.z1 - CCA.z0;

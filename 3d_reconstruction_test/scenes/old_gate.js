@@ -26,9 +26,10 @@ import {
 
 // ---------- colours picked from the photos ----------
 const C = {
-  lot: "#b1afa9",
-  walk: "#cac8c2",
-  joint: "#a19f99",
+  lot: "#999b9c", // wet
+  walk: "#b7b8b5",
+  joint: "#8f908e",
+  puddle: "#c6d1d9", // the sky, lying on the ground
   base: "#4f4a43",
   wall: "#dcdcd7",
   coping: "#cfd0cc",
@@ -67,7 +68,9 @@ let layers; // groups the panel can show or hide
 function buildGround() {
   const w = SITE.right - SITE.left;
   const lotDepth = SITE.front - WALK.depth;
-  facetedGround(scene, w, lotDepth, C.lot, 0, WALK.depth + lotDepth / 2, 2, 0.1);
+  // wet: the lot and the sidewalk shine a little under the grey sky
+  facetedGround(scene, w, lotDepth, C.lot, 0, WALK.depth + lotDepth / 2, 2, 0.1).material.roughness = 0.3;
+  mat(C.walk).roughness = 0.4;
 
   // sidewalk slab with expansion joints
   box(scene, w, WALK.height, WALK.depth, C.walk, 0, 0, WALK.depth / 2);
@@ -184,12 +187,22 @@ function buildBuilding() {
 
   parts.addTo(scene);
 
+  // lights are on inside: the door glows warm, and so do the windows with the palest blinds
+  for (const [color, glow] of [[C.leafGlass, 0.38], [C.doorGlass, 0.45], [blinds[0], 0.3]]) {
+    mat(color).emissive.set("#ffac5c");
+    mat(color).emissiveIntensity = glow;
+  }
+  // and spill out onto the wet sidewalk
+  const spill = new THREE.PointLight("#ffbe7a", 8, 11, 2);
+  spill.position.set(0, y0 + 2.4, 0.9);
+  scene.add(spill);
+
   // invisible click target over the door: it leads into the ID Studio
   const doorway = new THREE.Mesh(
     new THREE.BoxGeometry(3.1, 2.95, 0.1),
     new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }),
   );
-  doorway.position.set(0, y0 + 1.475, -DOOR.depth + 0.1);
+  doorway.position.set(0, y0 + 1.475, -DOOR.depth + 0.14); // clear of the handles, so they don't block a click
   doorway.userData.portal = { to: "studio" }; // the card comes from the studio scene
   scene.add(doorway);
 
@@ -408,6 +421,30 @@ function buildCamp() {
 }
 
 /* ==================================================================
+   PUDDLES: flat, uneven patches of sky on the lot and the sidewalk
+================================================================== */
+
+function buildPuddles() {
+  const water = new THREE.MeshBasicMaterial({ color: C.puddle, transparent: true, opacity: 0.34, depthWrite: false });
+  const puddle = (x, z, y, r) => {
+    const pts = [];
+    const n = 9;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const d = r * (0.55 + rand() * 0.6);
+      pts.push(new THREE.Vector2(Math.cos(a) * d * 1.5, Math.sin(a) * d));
+    }
+    const mesh = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(pts)).rotateX(-Math.PI / 2).rotateY(rand() * Math.PI), water);
+    mesh.position.set(x, y + 0.012, z);
+    mesh.raycast = () => {};
+    scene.add(mesh);
+  };
+  // on the lot, out past the parked cars, and a few in the dips of the sidewalk
+  for (let i = 0; i < 18; i++) puddle(SITE.left + 3 + rand() * (SITE.right - SITE.left - 6), 9.5 + rand() * 11, 0, 0.4 + rand() * 0.8);
+  for (const x of [-12.5, -3.4, 2.6, 7.2, 15.3]) puddle(x, 1.0 + rand() * 1.6, WALK.height, 0.3 + rand() * 0.35);
+}
+
+/* ==================================================================
    RAIN: falling streaks over the whole site, and small splashes on the ground
 ================================================================== */
 
@@ -490,9 +527,9 @@ function stepRain(now) {
 // overcast, for the rain: most of the light comes evenly from a grey sky,
 // with a weak, cool key from high above, so shadows are soft and faint
 function buildLights() {
-  scene.add(new THREE.HemisphereLight("#dfe4e8", "#7c7e80", 2.7));
+  scene.add(new THREE.HemisphereLight("#d3dbe3", "#6f757b", 2.25));
 
-  const sun = new THREE.DirectionalLight("#e8edf1", 0.75);
+  const sun = new THREE.DirectionalLight("#dfe7ef", 0.65);
   sun.position.set(12, 50, 18);
   sun.target.position.set(0, 0, 4);
   sun.castShadow = true;
@@ -505,7 +542,7 @@ function buildLights() {
   sun.shadow.bias = -0.0008;
   scene.add(sun, sun.target);
 
-  const fill = new THREE.DirectionalLight("#d8e0e8", 0.5);
+  const fill = new THREE.DirectionalLight("#cfd9e4", 0.4);
   fill.position.set(-10, 15, 30);
   scene.add(fill);
 }
@@ -539,6 +576,12 @@ export default {
   ],
   // the sound of rain plays while this scene is on screen and its Rain layer is shown
   ambience: { sound: "rain", layer: "rain" },
+  // a rainy day: a grey-blue sky, the far end of the building lost in the rain
+  mood: {
+    sky: { top: "#7d8a97", horizon: "#c0c9d0", ground: "#aab3ba" },
+    fog: { color: "#bac3ca", near: 14, far: 130, ref: 45 },
+    grade: { tint: "#f3f7ff", saturation: 0.8, grain: 0.08, vignette: 0.38 },
+  },
   views: {
     // DJI drone camera: 24 mm equiv., 16:9 photos
     drone: { label: "Drone", pos: DRONE, target: aim(DRONE, -10.6, 26.7), photo: { fov: 43, aspect: 16 / 9, name: "DJI_0007", src: "photos/old_gate.jpg" } },
@@ -556,6 +599,7 @@ export default {
     buildGround();
     buildBuilding();
     buildStreet();
+    buildPuddles();
     buildRain();
     return scene;
   },

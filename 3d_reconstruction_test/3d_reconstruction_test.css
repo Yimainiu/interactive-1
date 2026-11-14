@@ -140,6 +140,61 @@ label input {
   pointer-events: none;
 }
 
+/* a line of the poem, low in the middle: the hour, then a few words */
+#caption {
+  position: fixed;
+  left: 50%;
+  bottom: 11vh;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 0.7rem 1.4rem 0.8rem;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  font-family: "Didot", "Bodoni 72", "Playfair Display", Georgia, "Times New Roman", serif;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 0.6rem);
+  transition: opacity 1.2s ease, transform 1.2s ease;
+  pointer-events: none;
+}
+
+#caption.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.caption-time {
+  font-size: 0.72rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+}
+
+.caption-line {
+  font-size: 1.15rem;
+  font-style: italic;
+}
+
+.caption-time:empty,
+.caption-line:empty {
+  display: none;
+}
+
+/* over a dark picture (the studio at night) the loose text turns pale */
+body.dark #hint {
+  color: var(--paper);
+}
+
+body.dark #frame {
+  border-color: var(--paper);
+  box-shadow: 0 0 0 100vmax rgb(12 12 20 / 0.5);
+}
+
 /* ---------- photo frame ---------- */
 
 #frame {
@@ -390,7 +445,7 @@ label input {
 #info,
 #controls,
 #hint {
-  transition: opacity 1.2s ease;
+  transition: opacity 1.2s ease, color 1.2s ease;
 }
 
 body.ending #info,
@@ -490,6 +545,12 @@ body.ending #hint {
   #info p,
   #hint {
     display: none;
+  }
+
+  /* the poem's line goes under the title, clear of the buttons */
+  #caption {
+    top: 5.5rem;
+    bottom: auto;
   }
 
   h1 {

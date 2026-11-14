@@ -5,6 +5,7 @@ import oldGate from "./scenes/old_gate.js";
 import idStudio from "./scenes/id_studio.js";
 import mainGate from "./scenes/main_gate.js";
 import { unlockSound, setAmbience } from "./ambience.js";
+import { createAtmosphere } from "./atmosphere.js";
 import { addMarkers, pulseMarkers, pick, openScan, closeScan, isOpen, renderViewer } from "./scans.js";
 
 /* ------------------------------------------------------------------
@@ -13,6 +14,8 @@ import { addMarkers, pulseMarkers, pick, openScan, closeScan, isOpen, renderView
    the photo, then fades it away to reveal the model from the same
    camera position. The panel switches between the photo, the
    low-poly model and its wireframe, and hides groups of objects.
+   Every scene has its own weather and hour (its `mood`), drawn by
+   atmosphere.js: rain, dusk falling into night, early morning.
 ------------------------------------------------------------------- */
 
 // scene 1, scene 2, ... in button order
@@ -30,6 +33,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const atmosphere = createAtmosphere(renderer); // sky, fog and the paper finish
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 400);
 const controls = new OrbitControls(camera, canvas);
@@ -48,6 +52,7 @@ const modeButtons = document.querySelectorAll("#modes button");
 const viewBox = document.querySelector("#views");
 const layerBox = document.querySelector("#layers");
 const hint = document.querySelector("#hint");
+const caption = document.querySelector("#caption");
 const HINT = hint.textContent; // scenes can swap in their own
 
 const built = {}; // each scene is built the first time it's shown
@@ -188,13 +193,15 @@ function showScene(key) {
   const def = SCENES[key];
   if (!built[key]) {
     built[key] = def.build();
-    built[key].background = new THREE.Color("#f6eee9");
+    atmosphere.attach(built[key], def.mood);
     addMarkers(built[key]);
     materials.forEach((m) => (m.wireframe = modelMode === "wire"));
   }
   active = key;
   sceneButtons.forEach((b) => b.classList.toggle("active", b.dataset.scene === key));
   hint.textContent = def.hint || HINT;
+  hideCaption();
+  def.enter?.(); // the scene starts over (the studio goes back to dusk)
 
   viewBox.replaceChildren(
     ...Object.entries(def.views).map(([name, view]) => {
@@ -323,21 +330,64 @@ async function hideCard(key) {
   slate.hidden = true;
 }
 
-// walk toward the door, cut to the next scene's card, then open on that scene
-async function enterPortal(portal, point) {
+// cut to the next scene's card, then open on that scene
+async function crossTo(key) {
   if (crossing) return;
   crossing = true;
   canvas.style.cursor = "";
-  // a short dolly toward the door while the card fades in
+  await showCard(key);
+  await hideCard(key);
+  crossing = false;
+}
+
+// walk toward the door while the next scene's card fades in
+function enterPortal(portal, point) {
+  if (crossing) return;
   const dir = point.clone().sub(camera.position);
   tween = {
     start: performance.now(),
     from: { pos: camera.position.clone(), target: controls.target.clone(), fov: camera.fov },
     to: { pos: camera.position.clone().addScaledVector(dir, 0.6), target: point.clone(), fov: camera.fov },
   };
-  await showCard(portal.to);
-  await hideCard(portal.to);
-  crossing = false;
+  crossTo(portal.to);
+}
+
+// ---------- what a scene can ask for while it plays ----------
+
+// a line of the poem at the foot of the screen: an hour, and a few words
+let captionTimer = 0;
+function showCaption({ time = "", line = "", hold = 5200 }) {
+  caption.querySelector(".caption-time").textContent = time;
+  caption.querySelector(".caption-line").textContent = line;
+  caption.classList.add("show");
+  clearTimeout(captionTimer);
+  captionTimer = setTimeout(hideCaption, hold);
+}
+function hideCaption() {
+  clearTimeout(captionTimer);
+  caption.classList.remove("show");
+}
+
+// a scene's update() can return one of these: { caption }, { hint }, { look }, { to }
+function sceneEvent(e) {
+  if (e.caption) showCaption(e.caption);
+  if (e.hint) hint.textContent = e.hint;
+  // turn to look at a point, unless it is already well inside the picture
+  if (e.look) {
+    const p = new THREE.Vector3(...e.look).project(camera);
+    if (Math.abs(p.x) > 0.7 || Math.abs(p.y) > 0.7 || p.z > 1) {
+      frame.hidden = true;
+      current = null;
+      viewBox.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+      tween = {
+        start: performance.now(),
+        dur: 2400,
+        from: { pos: camera.position.clone(), target: controls.target.clone(), fov: camera.fov },
+        to: { pos: camera.position.clone(), target: new THREE.Vector3(...e.look), fov: camera.fov },
+      };
+    }
+  }
+  if (e.to) crossTo(e.to); // on to another scene, by way of its title card
 }
 
 // ---------- page load: the project's name, then scene 1's card, then a click ----------
@@ -494,8 +544,8 @@ canvas.addEventListener("pointerup", (e) => {
   const hit = pick(built[active], camera, e.clientX, e.clientY, canvas);
   if (hit?.scan) openScan(hit.scan);
   else if (hit?.portal) enterPortal(hit.portal, hitPoint(e));
-  // anything else goes to the scene (the main gate's walker)
-  else SCENES[active].click?.(hitsAt(e)[0] || null, ray.ray);
+  // anything else goes to the scene (the main gate's walker, the studio's things)
+  else SCENES[active].click?.(hitsAt(e)[0] || null, ray.ray, hit);
 });
 
 // what's under the pointer, nearest first, skipping hidden groups and markers
@@ -522,6 +572,7 @@ function resize() {
   const w = window.innerWidth;
   const h = window.innerHeight;
   renderer.setSize(w, h, false);
+  atmosphere.resize();
   camera.aspect = w / h;
   if (current && !tween) camera.fov = viewFov(SCENES[active].views[current]);
   camera.updateProjectionMatrix();
@@ -548,13 +599,16 @@ renderer.setAnimationLoop((now) => {
   if (!active) return;
   updateTween(now);
   controls.update();
-  if (SCENES[active].update?.(camera, now) === "leave") goodbye();
+  const event = SCENES[active].update?.(camera, now);
+  if (event === "leave") goodbye();
+  else if (event && !crossing) sceneEvent(event);
   pulseMarkers(built[active], now);
   controls.enabled = !isOpen() && !ending;
-  // a scene's ambient sound, while it's on screen and its layer is shown
+  // a scene's ambient sound, while it's on screen (and its layer, if it names one, is shown)
   const amb = SCENES[active].ambience;
-  const on = amb && !crossing && !document.hidden && built[active].userData.layers[amb.layer].visible;
+  const on = amb && !crossing && !document.hidden && (!amb.layer || built[active].userData.layers[amb.layer].visible);
   setAmbience(on ? amb.sound : null);
-  renderer.render(built[active], camera);
+  const mood = atmosphere.render(built[active], camera, camera.position.distanceTo(controls.target));
+  document.body.classList.toggle("dark", mood.dark); // pale text over a dark picture
   renderViewer(now);
 });

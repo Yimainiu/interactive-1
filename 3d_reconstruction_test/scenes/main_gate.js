@@ -82,6 +82,8 @@ const GATE = { x0: 2.5, x1: 5.3 }; // the walk-through gate in the fence, betwee
 
 let scene;
 let layers; // groups the panel can show or hide
+let banners = []; // they stir in the morning air
+let trees = [];
 
 // top of the CCA facade at z: it peaks over the entrance and falls to both ends
 function ccaTop(z) {
@@ -328,6 +330,7 @@ function flag(x, y, z) {
   const banner = new THREE.Mesh(new THREE.ShapeGeometry(shape), mat(C.flag, { side: THREE.DoubleSide }));
   banner.position.set(x, y + 0.5, z);
   layers.people.add(banner);
+  banners.push(banner);
 }
 
 // the bridge across the +z end, deck level with the plaza, a passage underneath
@@ -461,6 +464,7 @@ function plantedBed(x0, x1, z0, z1, tufts, y = 0) {
 // young tree: thin trunk, a few leafy blobs; s scales it (s = 1 is about 4 m tall)
 function tree(x, z, s = 1, y = 0) {
   const g = place(layers.plants, x, z, rand() * 360, y);
+  trees.push(g);
   cyl(g, 0.05 * s, 0.08 * s, 2.4 * s, 5, C.trunk, 0, 0, 0);
   for (const [bx, by, bz, r] of [[0, 2.9, 0, 0.85], [0.55, 2.5, 0.2, 0.55], [-0.45, 2.6, -0.3, 0.6], [0.1, 3.5, 0.1, 0.55]]) {
     const blob = addMesh(g, new THREE.IcosahedronGeometry(r * s, 0), mat(rand() < 0.5 ? C.leaf : "#6d8a42"), bx * s, by * s, bz * s);
@@ -863,29 +867,48 @@ function buildStreets() {
   }
 }
 
+// early morning, cool and clear: the sun is still low behind the bridge, so the far
+// end of the courtyard lies in shadow and everything in the sun throws a long one
+// toward the gate; the sky lights the shade blue
 function buildLights() {
-  scene.add(new THREE.HemisphereLight("#e9f1fa", "#8d8a82", 2.0));
-  // afternoon sun, high from behind the bleachers' left, as in the drone video
-  const sun = new THREE.DirectionalLight("#fff4e0", 2.6);
-  sun.position.set(-30, 55, 45);
+  scene.add(new THREE.HemisphereLight("#d3e6f6", "#8b979f", 1.3));
+  const sun = new THREE.DirectionalLight("#ffeccb", 4.0);
+  sun.position.set(31, 46, 104);
   sun.target.position.set(0, 0, 4);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   for (const side of ["left", "bottom"]) sun.shadow.camera[side] = -70;
   for (const side of ["right", "top"]) sun.shadow.camera[side] = 70;
-  sun.shadow.camera.far = 220;
+  sun.shadow.camera.far = 240;
   sun.shadow.bias = -0.0008;
   scene.add(sun, sun.target);
-  const fill = new THREE.DirectionalLight("#dfe8ff", 0.7);
+  const fill = new THREE.DirectionalLight("#cfe0ff", 0.4);
   fill.position.set(30, 20, -30);
   scene.add(fill);
+}
+
+// the morning air: banners turn a little on their poles, the young trees sway
+function stir(now) {
+  const t = now / 1000;
+  banners.forEach((b, i) => (b.rotation.y = Math.sin(t * 1.3 + i * 1.7) * 0.22 + Math.sin(t * 3.1 + i) * 0.06));
+  trees.forEach((g, i) => {
+    g.rotation.z = Math.sin(t * 0.8 + i * 2.1) * 0.012;
+    g.rotation.x = Math.sin(t * 0.6 + i * 1.3) * 0.009;
+  });
 }
 
 export default {
   title: "Main Gate",
   // title card shown before the scene opens
-  card: { number: "Scene Three", title: "Main Gate", line: "The courtyard at the front of the school." },
+  card: { number: "Scene Three", title: "Main Gate", line: "Morning. The courtyard at the front of the school." },
   intro: "drone",
+  ambience: { sound: "morning" }, // birds, and a little air
+  // early morning: a pale, clean sky and a thin mist over the far end
+  mood: {
+    sky: { top: "#9cc4de", horizon: "#e9f1ee", ground: "#d3e0e4" },
+    fog: { color: "#dde8ec", near: 45, far: 240, ref: 60 },
+    grade: { tint: "#f6faff", saturation: 0.95, grain: 0.07, vignette: 0.3 },
+  },
   hint: "Click the paving to walk · click the gate to leave · drag to orbit",
   // walking out through the gate: the camera rises behind the walker, the scene turns
   // to wireframe, then the camera pulls back over the courtyard while everything shatters
@@ -933,6 +956,8 @@ export default {
     reseed(5);
     scene = new THREE.Scene();
     layers = makeLayers(scene, this.layers);
+    banners = [];
+    trees = [];
     buildLights();
     buildGround();
     buildCCA();
@@ -979,6 +1004,7 @@ export default {
 
   // called every frame; returns "leave" when the walker has stepped out of the gate
   update(camera, now) {
+    stir(now);
     return stepWalker(now);
   },
 

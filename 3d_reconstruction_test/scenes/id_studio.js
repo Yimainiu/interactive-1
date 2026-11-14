@@ -29,6 +29,12 @@ import {
    Units are metres. x runs along the circulation spine (+x toward the
    white corridor), z crosses it (+z toward the windows), y is up. The
    origin is the floor under the spot where the 360° video was shot.
+
+   The scene opens at dusk. Three things on the benches can be set
+   going (the sketches, the monitor, the 3D printer); each one takes
+   the evening further into night. Once it is dark the pendant lamp
+   can be switched on: it is long past midnight, and the scene hands
+   over to the main gate, in the morning. See TIME, near the end.
 ------------------------------------------------------------------- */
 
 // ---------- colours picked from the photos ----------
@@ -69,6 +75,7 @@ const WIN = { sill: 1.0, head: 3.3, bay: 1.9875, first: -3.85, shades: [1.45, 1.
 const BOARD = { bottom: 1.0, top: 2.05, rail: 2.1 };
 const GRID = 2.5; // steel grid the cord reels hang from
 const TOP = 0.91; // bench tops
+const LAMP = [-2.38, 1.79, 1.23]; // the pendant lamp's shade
 // round concrete columns (r 0.17) with a squared white pier on their -z side
 const COLUMNS = [
   { x: 4.2, z: -1.29, pier: [4.01, 4.41, -1.62, -1.42] },
@@ -80,14 +87,22 @@ const CORRIDOR = { x0: 4.45, x1: 22, open: 9.5, ceil: 3.2 };
 const AISLE = { x1: -18, glassFrom: -5.6, glassZ: -1.05 };
 
 // ceilings face down, away from the sky light: let them glow a little instead of going dark
+// (how much depends on the hour, see TIME)
 const LIT = { emissive: "#bfb7a6", emissiveIntensity: 0.55 };
 
 let scene;
 let layers; // groups the panel can show or hide
 // roof parts also hide when the camera flies above the room, like a dollhouse
 let roof;
-// window frames: thin stuff that shouldn't stripe the floor with shadows
+// window shades and the aisle's glass frames: thin stuff that shouldn't shadow the floor
 let shell;
+// what changes with the hour: lights, the sky in the windows, things that can be switched on
+let lights;
+let windowSky; // { g, tex }: the gradient painted behind the window wall
+let skylight; // material of the ridge over the spine
+let dust; // motes hanging in the low sun
+const things = {}; // name -> the invisible box you click to use it
+const parts = {}; // name -> what that thing shows once it is going
 
 /* ==================================================================
    SMALL BUILDERS
@@ -223,6 +238,7 @@ function pendantLamp(x, y, z) {
   shade.position.set(x, y, z);
   layers.hanging.add(shade);
   bar(layers.hanging, [x, y + 0.174, z], [x, GRID, z], 0.012, C.black);
+  return shade;
 }
 
 // the hanging red EXIT sign, readable from both ends of the aisle
@@ -275,7 +291,7 @@ function monitor(parent, x, y, z, turn, color = C.black) {
   box(g, 0.2, 0.02, 0.16, color, 0, 0, 0);
   box(g, 0.04, 0.22, 0.03, color, 0, 0, -0.03);
   box(g, 0.6, 0.36, 0.035, color, 0, 0.17, 0);
-  box(g, 0.56, 0.32, 0.005, "#1d2530", 0, 0.19, 0.02);
+  return box(g, 0.56, 0.32, 0.005, "#1d2530", 0, 0.19, 0.02); // the screen
 }
 
 function printer3d(parent, x, y, z) {
@@ -285,6 +301,29 @@ function printer3d(parent, x, y, z) {
   spool.rotation.x = Math.PI / 2;
   spool.position.set(0, 0.24, -0.25);
   g.add(spool);
+  g.userData.spool = spool;
+  return g;
+}
+
+// an invisible box around something you can use: it gets a glowing dot (see scans.js),
+// and a click on it comes back to click() below with its name
+function touch(name, x0, x1, y0, y1, z0, z1) {
+  const target = new THREE.Mesh(
+    new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0),
+    new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }),
+  );
+  target.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+  target.userData.action = name;
+  target.userData.marker = true;
+  scene.add(target);
+  things[name] = target;
+}
+
+// a material of its own that can light up (kept out of the shared ones, which never change)
+function glowing(name, color, emissive) {
+  const m = new THREE.MeshStandardMaterial({ color, emissive, emissiveIntensity: 0, flatShading: true, roughness: 0.6 });
+  materials.set(name, m);
+  return m;
 }
 
 /* ==================================================================
@@ -318,21 +357,31 @@ function buildWindowWall() {
   const z = BAY.z1;
   const w = MODEL.x1 - MODEL.x0;
   const mid = (MODEL.x0 + MODEL.x1) / 2;
-  wall(scene, w, WIN.sill, C.wall, mid, 0, z, 180);
-  wall(scene, w, CEIL - WIN.head, C.wall, mid, WIN.head, z, 180);
-  const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, WIN.head - WIN.sill), new THREE.MeshBasicMaterial({ color: C.glass }));
+  // the wall below and above the glass shades the floor, so the low sun falls in as window light
+  wall(scene, w, WIN.sill, C.wall, mid, 0, z, 180).castShadow = true;
+  wall(scene, w, CEIL - WIN.head, C.wall, mid, WIN.head, z, 180).castShadow = true;
+  // the sky behind the glass: a gradient repainted as the hour changes (see TIME)
+  const cv = document.createElement("canvas");
+  cv.width = 2;
+  cv.height = 64;
+  windowSky = { g: cv.getContext("2d"), tex: new THREE.CanvasTexture(cv) };
+  windowSky.tex.colorSpace = THREE.SRGBColorSpace;
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, WIN.head - WIN.sill), new THREE.MeshBasicMaterial({ map: windowSky.tex, fog: false }));
   glass.position.set(mid, (WIN.sill + WIN.head) / 2, z + 0.01);
   glass.rotation.y = Math.PI;
   scene.add(glass);
 
-  // mullions every 2 m, lined up with the bay; transoms; mesh shades pulled to different heights
-  const frames = batch();
+  // mullions every 2 m, lined up with the bay; transoms (their shadows bar the light on the floor)
+  const bars = batch();
   const first = Math.ceil((MODEL.x0 - WIN.first) / WIN.bay);
   const last = Math.floor((MODEL.x1 - WIN.first) / WIN.bay);
   for (let k = first; k <= last; k++) {
-    frames.box(0.09, WIN.head - WIN.sill, 0.08, C.steel, WIN.first + k * WIN.bay, WIN.sill, z - 0.04);
+    bars.box(0.09, WIN.head - WIN.sill, 0.08, C.steel, WIN.first + k * WIN.bay, WIN.sill, z - 0.04);
   }
-  for (const y of [WIN.sill - 0.03, 1.75, 2.5, WIN.head - 0.04]) frames.box(w, 0.06, 0.07, C.steel, mid, y, z - 0.04);
+  for (const y of [WIN.sill - 0.03, 1.75, 2.5, WIN.head - 0.04]) bars.box(w, 0.06, 0.07, C.steel, mid, y, z - 0.04);
+  bars.addTo(scene, true);
+  // mesh shades pulled to different heights
+  const frames = batch();
   for (let k = first; k < last; k++) {
     const x0 = WIN.first + k * WIN.bay;
     // measured in the studio's four bays, a guess elsewhere
@@ -439,7 +488,7 @@ function buildCeiling() {
     roof.add(deck);
   }
   // skylight ridge over the spine, out to the end of the aisle
-  const sky = new THREE.MeshBasicMaterial({ color: "#fbfaf4", side: THREE.DoubleSide });
+  const sky = (skylight = new THREE.MeshBasicMaterial({ color: "#fbfaf4", side: THREE.DoubleSide, fog: false }));
   const sx0 = AISLE.x1;
   const sx1 = CORRIDOR.x0;
   const half = (SPINE.z1 - SPINE.z0) / 2;
@@ -641,6 +690,14 @@ function buildFurniture() {
   items.box(0.38, 0.06, 0.24, C.yellow, 2.7, TOP + 0.14, 1.15);
   items.box(0.28, 0.04, 0.06, C.white, 1.9, TOP, 1.05);
   items.addTo(F, true);
+  // the sketches can be picked up again: crumpled drafts pile up around them
+  touch("sketches", 0.24, 0.76, TOP, TOP + 0.1, 0.9, 1.44);
+  parts.sketches = new THREE.Group();
+  F.add(parts.sketches);
+  for (const [x, y, z, r] of [[0.3, TOP, 0.98, 0.035], [0.47, TOP, 1.5, 0.03], [0.62, TOP, 0.96, 0.028], [0.42, 0, 2.02, 0.04], [0.95, 0, 2.3, 0.035], [0.1, 0, 1.75, 0.03]]) {
+    const ball = addMesh(parts.sketches, new THREE.IcosahedronGeometry(r, 0), mat(C.white), x, y + r * 0.8, z);
+    ball.rotation.set(x * 9, z * 7, 0);
+  }
   stool(F, 0.75, 1.85);
   stool(F, 1.95, 1.95);
   chair(F, 1.45, 2.1, 160);
@@ -649,7 +706,15 @@ function buildFurniture() {
   bench(F, 1.2, 2.6, 2.78, 3.53);
   bench(F, 1.2, 2.6, 3.53, 4.18);
   bench(F, 2.6, 3.85, 2.78, 3.53);
-  printer3d(F, 2.15, TOP, 2.98);
+  // this printer can be started: a lit window in its front, the head going to and fro
+  const printer = printer3d(F, 2.15, TOP, 2.98);
+  touch("printer", 1.94, 2.36, TOP, TOP + 0.44, 2.72, 3.25);
+  parts.printer = {
+    glow: glowing("printer window", "#3a3530", "#ffb45e"),
+    spool: printer.userData.spool,
+  };
+  box(printer, 0.3, 0.26, 0.012, C.black, 0, 0.08, -0.216).material = parts.printer.glow;
+  parts.printer.head = box(printer, 0.07, 0.035, 0.03, C.grey, 0, 0.27, -0.225);
   const more = batch();
   more.box(0.22, 0.22, 0.22, C.red, 3.3, TOP, 3.0);
   more.box(0.35, 0.18, 0.25, "#7f8487", 1.6, TOP, 3.15);
@@ -663,7 +728,10 @@ function buildFurniture() {
   const counter = { z0: BAY.z1 - 0.66, x0: BAY.x0 + 0.17, x1: BAY.x1 - 0.17, top: 0.93 };
   box(F, counter.x1 - counter.x0, counter.top, BAY.z1 - 0.02 - counter.z0, C.white, (counter.x0 + counter.x1) / 2, 0, (counter.z0 + BAY.z1 - 0.02) / 2);
   monitor(F, -3.2, counter.top, 6.8, 180, "#d9dadc");
-  monitor(F, 2.3, counter.top, 6.8, 180, "#d9dadc");
+  // this monitor can be woken up
+  parts.monitor = glowing("monitor screen", "#1d2530", "#bcd6ff");
+  monitor(F, 2.3, counter.top, 6.8, 180, "#d9dadc").material = parts.monitor;
+  touch("monitor", 1.98, 2.62, counter.top, counter.top + 0.56, 6.68, 6.92);
   monitor(F, 3.3, counter.top, 6.8, 180);
   printer3d(F, -1.1, counter.top, 6.8);
   const odds = batch();
@@ -710,16 +778,17 @@ function buildHanging() {
     cordReel(x, y, z, 90, drop);
   }
   // triangulated centre of the shade: (-2.38, 1.79, 1.23)
-  pendantLamp(-2.38, 1.7, 1.23);
+  parts.lamp = pendantLamp(LAMP[0], 1.7, LAMP[2]);
+  touch("lamp", LAMP[0] - 0.14, LAMP[0] + 0.14, 1.62, 1.95, LAMP[2] - 0.14, LAMP[2] + 0.14);
   exitSign(-4.19, 2.25, -0.18);
 }
 
 function buildLights() {
-  scene.add(new THREE.HemisphereLight("#fff9ee", "#7d7465", 1.9));
-  // daylight through the windows, low from beyond the window wall
-  const sun = new THREE.DirectionalLight("#fff1d9", 2.2);
-  sun.position.set(6, 14, 26);
-  sun.target.position.set(0, 0, 2);
+  const hemi = new THREE.HemisphereLight("#ffffff", "#ffffff", 1);
+  // the sun, low beyond the window wall; later the same light is the night sky's glow
+  const sun = new THREE.DirectionalLight("#ffffff", 1);
+  sun.position.set(-11.2, 10.5, 31);
+  sun.target.position.set(0, 0.9, 2.5);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.left = -14;
@@ -728,10 +797,220 @@ function buildLights() {
   sun.shadow.camera.bottom = -14;
   sun.shadow.camera.far = 60;
   sun.shadow.bias = -0.0005;
-  scene.add(sun, sun.target);
-  const fill = new THREE.DirectionalLight("#e4ecff", 0.8);
+  const fill = new THREE.DirectionalLight("#e4ecff", 1);
   fill.position.set(-8, 10, -12);
-  scene.add(fill);
+  // lights for the things that can be switched on; dark until then
+  const lamp = new THREE.PointLight("#ffc88a", 0, 14, 2);
+  lamp.position.set(LAMP[0], LAMP[1] - 0.14, LAMP[2]);
+  const screen = new THREE.PointLight("#a9c8ff", 0, 5, 2);
+  screen.position.set(2.3, 1.25, 6.4);
+  const print = new THREE.PointLight("#ffb45e", 0, 3, 2);
+  print.position.set(2.15, TOP + 0.2, 2.6);
+  scene.add(hemi, sun, sun.target, fill, lamp, screen, print);
+  lights = { hemi, sun, fill, lamp, screen, print };
+}
+
+// motes of dust hanging in the bay, lit by the low sun
+function buildDust() {
+  const n = 260;
+  const at = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    at.set([BAY.x0 + Math.random() * (BAY.x1 - BAY.x0), 0.3 + Math.random() * 2.6, SPINE.z0 + Math.random() * (BAY.z1 - SPINE.z0)], i * 3);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(at, 3));
+  // each mote is a soft round speck
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 32;
+  const g = cv.getContext("2d");
+  const glow = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  glow.addColorStop(0, "rgba(255,255,255,1)");
+  glow.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = glow;
+  g.fillRect(0, 0, 32, 32);
+  dust = new THREE.Points(geo, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(cv), color: "#ffd9a8", size: 0.03, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  dust.raycast = () => {};
+  dust.userData.seed = Array.from({ length: n }, () => Math.random() * 6.28);
+  scene.add(dust);
+}
+
+/* ==================================================================
+   TIME: dusk, the blue hour, night
+   `time` runs 0 -> 1 across the three hours below; everything that
+   depends on the light is blended between them every frame.
+================================================================== */
+
+const col = (hex) => new THREE.Color(hex);
+const HOURS = [
+  {
+    // dusk: orange sun low through the windows, long shadows, warm dust
+    hemiSky: col("#e2cbd8"), hemiGround: col("#6a5a4e"), hemi: 1.25,
+    sun: col("#ffa35e"), sunLight: 3.4, fill: 0.3,
+    window: [col("#8789c4"), col("#f09d6c"), col("#ffd596")], skylight: col("#bfaecb"), lit: 0.4, dust: 0.5,
+    skyTop: col("#6c68a6"), skyHorizon: col("#f3b283"), skyGround: col("#9c8088"), fog: col("#cfa794"),
+    tint: col("#fff2e0"), saturation: 0.96, vignette: 0.4,
+  },
+  {
+    // the blue hour: the sun is gone, a last pink low in the windows
+    hemiSky: col("#93a6d6"), hemiGround: col("#40425a"), hemi: 0.95,
+    sun: col("#8494d8"), sunLight: 0.8, fill: 0.2,
+    window: [col("#26346a"), col("#4c5d9e"), col("#c88d92")], skylight: col("#39477c"), lit: 0.14, dust: 0.08,
+    skyTop: col("#1c2552"), skyHorizon: col("#6d6a9c"), skyGround: col("#3b3d62"), fog: col("#4c5480"),
+    tint: col("#eef0ff"), saturation: 0.95, vignette: 0.45,
+  },
+  {
+    // night: only the glow of the city through the glass
+    hemiSky: col("#4a5a8f"), hemiGround: col("#16171f"), hemi: 0.62,
+    sun: col("#8ea4e6"), sunLight: 0.5, fill: 0.08,
+    window: [col("#0a0f1f"), col("#131a33"), col("#2b3152")], skylight: col("#10152a"), lit: 0.03, dust: 0,
+    skyTop: col("#060915"), skyHorizon: col("#1a2140"), skyGround: col("#0d1020"), fog: col("#131930"),
+    tint: col("#e4eaff"), saturation: 0.85, vignette: 0.55,
+  },
+];
+
+// the order you use things in sets the hour; what you used sets the words
+const CLOCK = ["6:50 pm", "9:15 pm", "11:40 pm"];
+const LINES = {
+  sketches: "One more sketch. Then another.",
+  monitor: "The model, rebuilt again.",
+  printer: "The printer starts a long job.",
+  lamp: "The last light on the floor.",
+};
+const WORK = ["sketches", "monitor", "printer"];
+const PER_STEP = 4.5; // seconds one step of the evening takes
+const HOLD = 6500; // ms the lit lamp is held before the morning
+
+let time = 0; // 0 dusk -> 1 night
+let used = new Set();
+let lampOn = 0; // ms when it was switched on, or 0
+let lampReady = false; // night has fallen and the lamp's dot is showing
+let level = { sketches: 0, monitor: 0, printer: 0, lamp: 0 }; // each thing easing on, 0 -> 1
+let painted = -1; // the time the windows were last painted for
+let lastFrame = 0;
+const events = []; // waiting to be handed to the page, one per frame
+const mood = {
+  sky: { top: col("#000"), horizon: col("#000"), ground: col("#000") },
+  fog: { color: col("#000"), near: 9, far: 70, ref: 12 },
+  grade: { tint: col("#fff"), saturation: 1, grain: 0.08, vignette: 0.4 },
+  dark: true, // even at dusk the room is dim enough for pale text
+};
+
+// the value of something at `time`, blended between the hours on either side
+const blended = new THREE.Color();
+function at(pick) {
+  const s = Math.min(time * (HOURS.length - 1), HOURS.length - 1.0001);
+  const i = Math.floor(s);
+  const a = pick(HOURS[i]);
+  const b = pick(HOURS[i + 1]);
+  return typeof a === "number" ? a + (b - a) * (s - i) : blended.lerpColors(a, b, s - i);
+}
+
+// back to dusk, everything off
+function startEvening() {
+  time = 0;
+  used = new Set();
+  lampOn = 0;
+  lampReady = false;
+  level = { sketches: 0, monitor: 0, printer: 0, lamp: 0 };
+  painted = -1;
+  events.length = 0;
+  for (const name of WORK) things[name].userData.dot.visible = true;
+  things.lamp.userData.dot.visible = false;
+}
+
+function useThing(name) {
+  if (!things[name] || used.has(name) || lampOn) return;
+  if (name === "lamp") {
+    if (!lampReady) return;
+    lampOn = performance.now();
+    things.lamp.userData.dot.visible = false;
+    events.push({ caption: { time: "2:10 am", line: LINES.lamp, hold: HOLD - 1200 } }, { hint: "Long past midnight" });
+    return;
+  }
+  used.add(name);
+  things[name].userData.dot.visible = false;
+  events.push({ caption: { time: CLOCK[used.size - 1], line: LINES[name] } });
+}
+
+function stepEvening(now) {
+  const dt = Math.min((now - (lastFrame || now)) / 1000, 0.25);
+  lastFrame = now;
+
+  // the evening moves on toward where the things used so far have taken it
+  const goal = used.size / WORK.length;
+  time = Math.min(goal, time + dt / (PER_STEP * WORK.length));
+  if (time >= 1 && !lampReady) {
+    lampReady = true;
+    things.lamp.userData.dot.visible = true;
+    events.push({ hint: "It is dark · find the lamp and switch it on" }, { look: LAMP });
+  }
+  for (const name of WORK) level[name] += ((used.has(name) ? 1 : 0) - level[name]) * Math.min(1, dt * 3);
+  level.lamp += ((lampOn ? 1 : 0) - level.lamp) * Math.min(1, dt * 5);
+
+  // light
+  const L = lights;
+  L.hemi.color.copy(at((h) => h.hemiSky));
+  L.hemi.groundColor.copy(at((h) => h.hemiGround));
+  L.hemi.intensity = at((h) => h.hemi);
+  L.sun.color.copy(at((h) => h.sun));
+  L.sun.intensity = at((h) => h.sunLight);
+  L.fill.intensity = at((h) => h.fill);
+  const lit = at((h) => h.lit) + level.lamp * 0.05;
+  mat(C.ceiling, LIT).emissiveIntensity = lit;
+  mat(C.wall, LIT).emissiveIntensity = lit;
+  skylight.color.copy(at((h) => h.skylight));
+  dust.material.opacity = at((h) => h.dust);
+
+  // the sky in the windows, repainted while the hour is moving
+  if (Math.abs(time - painted) > 0.002) {
+    painted = time;
+    const grad = windowSky.g.createLinearGradient(0, 0, 0, 64);
+    [0, 0.6, 1].forEach((stop, i) => grad.addColorStop(stop, `#${at((h) => h.window[i]).getHexString()}`));
+    windowSky.g.fillStyle = grad;
+    windowSky.g.fillRect(0, 0, 2, 64);
+    windowSky.tex.needsUpdate = true;
+  }
+
+  // the air outside and the finish of the picture
+  mood.sky.top.copy(at((h) => h.skyTop));
+  mood.sky.horizon.copy(at((h) => h.skyHorizon));
+  mood.sky.ground.copy(at((h) => h.skyGround));
+  mood.fog.color.copy(at((h) => h.fog));
+  mood.grade.tint.copy(at((h) => h.tint));
+  mood.grade.saturation = at((h) => h.saturation);
+  mood.grade.vignette = at((h) => h.vignette);
+
+  // the things that are going
+  const t = now / 1000;
+  parts.sketches.visible = level.sketches > 0.02;
+  parts.sketches.scale.setScalar(Math.min(1, level.sketches * 1.2));
+  parts.monitor.emissiveIntensity = level.monitor * (0.95 + 0.05 * Math.sin(t * 9));
+  L.screen.intensity = level.monitor * 2.6;
+  parts.printer.glow.emissiveIntensity = level.printer * 1.1;
+  L.print.intensity = level.printer * 1.2;
+  if (used.has("printer")) {
+    parts.printer.head.position.x = Math.sin(t * 2.3) * 0.11;
+    parts.printer.spool.rotation.y = t * 0.6;
+  }
+  parts.lamp.material.emissiveIntensity = 0.05 + level.lamp * 0.9;
+  L.lamp.intensity = level.lamp * 8;
+
+  // dust drifting
+  const seed = dust.userData.seed;
+  const pos = dust.geometry.attributes.position;
+  if (dust.material.opacity > 0.01) {
+    for (let i = 0; i < pos.count; i++) {
+      pos.array[i * 3] += Math.sin(t * 0.21 + seed[i]) * 0.0006;
+      pos.array[i * 3 + 1] += Math.cos(t * 0.17 + seed[i] * 2) * 0.0004;
+    }
+    pos.needsUpdate = true;
+  }
+
+  // the lamp has been on a while: it is long past midnight, and then it is morning
+  if (lampOn && now - lampOn > HOLD) {
+    lampOn = Infinity; // only once
+    events.push({ to: "main" });
+  }
 }
 
 /* ==================================================================
@@ -746,6 +1025,9 @@ export default {
   // title card shown before the scene opens
   card: { number: "Scene Two", title: "ID Studio", line: "Through the old gate, into the studio." },
   intro: "windows",
+  hint: "Click the glowing dots · drag to orbit · scroll to zoom",
+  ambience: { sound: "room" }, // the hum of the empty building
+  mood, // dusk to night: stepEvening() keeps it up to date
   layers: [
     { key: "furniture", label: "Furniture" },
     { key: "cardboard", label: "Cardboard" },
@@ -799,12 +1081,25 @@ export default {
     buildCardboard();
     buildFurniture();
     buildHanging();
+    buildDust();
     for (const part of [roof, shell]) part.traverse((obj) => (obj.castShadow = false));
     return scene;
   },
 
-  // called every frame with the camera
-  update(camera) {
+  // each time the scene comes on screen
+  enter() {
+    startEvening();
+  },
+
+  // a click that wasn't a scan or a door: `picked.action` names the thing under it, if any
+  click(hit, ray, picked) {
+    if (picked?.action) useThing(picked.action);
+  },
+
+  // called every frame with the camera; hands the page one waiting event at a time
+  update(camera, now) {
     roof.visible = camera.position.y < CEIL - 0.1;
+    stepEvening(now);
+    return events.shift();
   },
 };

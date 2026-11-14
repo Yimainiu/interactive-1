@@ -7,6 +7,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
    note } gets a pulsing marker and can be clicked. A click opens a
    pop-up that loads the scan (a .glb file) and spins it slowly; it
    can still be dragged to look around and scrolled to zoom.
+   Objects with userData.marker = true (things a scene handles itself,
+   through userData.action) get the same marker; the scene can hide it
+   with obj.userData.dot.visible.
 ------------------------------------------------------------------- */
 
 const viewer = document.querySelector("#viewer");
@@ -143,13 +146,14 @@ let markerMat = null;
 export function addMarkers(scene) {
   markerMat ??= new THREE.SpriteMaterial({ map: markerTexture(), depthTest: false, transparent: true });
   const found = [];
-  scene.traverse((obj) => obj.userData.scan && found.push(obj));
+  scene.traverse((obj) => (obj.userData.scan || obj.userData.marker) && found.push(obj));
   scene.userData.markers = found.map((obj) => {
     const box = new THREE.Box3().setFromObject(obj);
     const sprite = new THREE.Sprite(markerMat);
     sprite.position.set((box.min.x + box.max.x) / 2, box.max.y + 0.25, box.max.z + 0.1);
-    sprite.userData.scanOwner = obj;
+    sprite.userData.markerOf = obj;
     sprite.renderOrder = 10;
+    obj.userData.dot = sprite;
     scene.add(sprite);
     return sprite;
   });
@@ -170,8 +174,7 @@ export function pick(scene, cam, clientX, clientY, canvas) {
   raycaster.setFromCamera(pointer, cam);
   for (const hit of raycaster.intersectObjects(scene.children, true)) {
     if (!hit.object.visible) continue;
-    for (let o = hit.object; o; o = o.parent) {
-      if (o.userData.scanOwner) return { scan: o.userData.scanOwner.userData.scan };
+    for (let o = hit.object.userData.markerOf || hit.object; o; o = o.parent) {
       if (o.userData.scan) return { scan: o.userData.scan };
       if (o.userData.portal) return { portal: o.userData.portal };
       if (o.userData.action) return { action: o.userData.action };

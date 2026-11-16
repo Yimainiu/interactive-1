@@ -451,8 +451,10 @@ async function openingCard(key) {
   slate.querySelector(".slate-title").textContent = PROJECT.title;
   slate.querySelector(".slate-line").textContent = PROJECT.line;
   slate.hidden = false;
+  // it is simply there when the page opens: nothing fades or spreads in ("still" switches that off)
+  slate.classList.add("instant", "show", "still");
   slate.getBoundingClientRect();
-  slate.classList.add("instant", "show");
+  slate.classList.remove("still");
   // held until a click, like a scene's card
   await clickToEnter();
   unlockSound();

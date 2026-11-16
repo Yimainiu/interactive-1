@@ -481,6 +481,12 @@ body.ending #hint {
   text-wrap: balance;
 }
 
+/* ... and it is there from the start, with none of the card's usual arriving */
+#slate.still,
+#slate.still * {
+  transition: none !important;
+}
+
 /* scene 1's card waits for a click */
 #slate.waiting {
   cursor: pointer;

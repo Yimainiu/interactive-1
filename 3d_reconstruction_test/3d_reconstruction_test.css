@@ -470,14 +470,17 @@ body.ending #hint {
   display: none;
 }
 
-/* the project's name on page load: a longer title, so a little smaller */
+/* the project's name on page load: a longer title, so a little smaller,
+   and a larger subtitle, so the two read as one name (about 2.6 : 1) */
 #slate.project .slate-title {
-  font-size: clamp(2.2rem, 6.4vw, 4.6rem);
+  font-size: clamp(2rem, 5.4vw, 3.9rem);
   text-wrap: balance;
 }
 
 #slate.project .slate-line {
-  max-width: 34rem;
+  max-width: min(60rem, 92vw);
+  font-size: clamp(1.05rem, 2.2vw, 1.5rem);
+  line-height: 1.35;
   text-wrap: balance;
 }
 

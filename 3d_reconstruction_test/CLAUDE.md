@@ -26,7 +26,7 @@ An interactive poem — documenting an industrial design student’s life at CCA
 - `3d_reconstruction_test.html`：页面结构和左侧面板，包括 Scene、Display、Style、View、Show。three.js 通过 importmap 从 CDN 加载，不需要安装任何东西。
 - `3d_reconstruction_test.js`：主程序，负责渲染器、相机、视角切换、照片和模型的切换、面板，以及点门进入下一个场景（portal）。
 - `3d_reconstruction_test.css`：样式。
-- 开场顺序：先在白屏上显示项目名（`PROJECT`，在主程序里），淡出后换成第 1 幕的标题卡，停住等点击（或按 Enter / 空格）才进入场景。直接带视角的链接（如 `#gate/street`）会跳过开场。
+- 开场顺序：先在白屏上显示项目名（`PROJECT`，在主程序里），停住等点击（或按 Enter / 空格）；点击后换成第 1 幕的标题卡，同样等点击才进入场景。直接带视角的链接（如 `#gate/street`）会跳过开场。
 - `atmosphere.js`：三个场景共用的画面和渲染流程。给每个场景加天空穹顶和雾，再按面板 Style 选中的画法（style）把整幅画面画到屏幕上。每个场景用自己的 `mood` 描述天气，这里每帧读取一次；同一种天气用哪种画法来画，由 style 决定。
 - `styles/`：四种画法，每种一个文件，面板 Style 里各有一个按钮。默认是 Paper。
   - `paper.js`（Paper）：原来的样子。把场景原样"印"在纸上：调色、降饱和、纸的纤维和颗粒、四角压暗。不给物体描边。

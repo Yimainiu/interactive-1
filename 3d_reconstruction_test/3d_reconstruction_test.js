@@ -422,7 +422,6 @@ const PROJECT = {
   title: "Before the Shadow Settles",
   line: "An interactive poem — documenting an industrial design student’s life at CCA",
 };
-const PROJECT_HOLD = 4500;
 const CARD_SWAP = 2000; // the type fading and the rules drawing back in, per the CSS
 
 // waits on the card for a click or Enter / space
@@ -454,7 +453,9 @@ async function openingCard(key) {
   slate.hidden = false;
   slate.getBoundingClientRect();
   slate.classList.add("instant", "show");
-  await wait(PROJECT_HOLD);
+  // held until a click, like a scene's card
+  await clickToEnter();
+  unlockSound();
   // its type fades away while the white card stays up ("instant" keeps it opaque)
   slate.classList.remove("show");
   await wait(CARD_SWAP);
@@ -462,7 +463,6 @@ async function openingCard(key) {
   // the first scene's card, held until a click
   await showCard(key, true, 0);
   await clickToEnter();
-  unlockSound();
   await hideCard(key);
   crossing = false;
 }

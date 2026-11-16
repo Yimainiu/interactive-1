@@ -533,6 +533,13 @@ body.ending #hint {
   display: none;
 }
 
+/* short windows: the description makes room, so the two panels don't run into each other */
+@media (max-height: 720px) {
+  #info p {
+    display: none;
+  }
+}
+
 /* phones: keep the panels small so the model stays visible */
 @media (max-width: 600px) {
   #info,

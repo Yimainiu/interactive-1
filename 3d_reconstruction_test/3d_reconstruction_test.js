@@ -16,6 +16,8 @@ import { addMarkers, pulseMarkers, pick, openScan, closeScan, isOpen, renderView
    low-poly model and its wireframe, and hides groups of objects.
    Every scene has its own weather and hour (its `mood`), drawn by
    atmosphere.js: rain, dusk falling into night, early morning.
+   The panel also picks the style the picture is painted in
+   (styles/): on paper, as a watercolour, in oils, or under water.
 ------------------------------------------------------------------- */
 
 // scene 1, scene 2, ... in button order
@@ -49,6 +51,7 @@ const photoImg = photo.querySelector("img");
 const photoLabel = document.querySelector("#photo-label");
 const sceneButtons = document.querySelectorAll("#scenes button");
 const modeButtons = document.querySelectorAll("#modes button");
+const styleBox = document.querySelector("#styles");
 const viewBox = document.querySelector("#views");
 const layerBox = document.querySelector("#layers");
 const hint = document.querySelector("#hint");
@@ -186,6 +189,29 @@ modeButtons.forEach((b) =>
     else setModel(b.dataset.mode);
   }),
 );
+
+// ---------- style: how the picture is painted ----------
+
+function setStyle(key) {
+  atmosphere.setStyle(key);
+  styleBox.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b.dataset.style === key));
+}
+
+styleBox.replaceChildren(
+  ...atmosphere.styles.map(({ key, label }) => {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.dataset.style = key;
+    b.addEventListener("click", () => {
+      // a style repaints the model, so a photo that is up makes way for it
+      stopIntro();
+      if (mode === "photo") setModel(modelMode);
+      setStyle(key);
+    });
+    return b;
+  }),
+);
+setStyle(atmosphere.styles[0].key);
 
 // ---------- scenes ----------
 
@@ -608,7 +634,7 @@ renderer.setAnimationLoop((now) => {
   const amb = SCENES[active].ambience;
   const on = amb && !crossing && !document.hidden && (!amb.layer || built[active].userData.layers[amb.layer].visible);
   setAmbience(on ? amb.sound : null);
-  const mood = atmosphere.render(built[active], camera, camera.position.distanceTo(controls.target));
-  document.body.classList.toggle("dark", mood.dark); // pale text over a dark picture
+  const picture = atmosphere.render(built[active], camera, camera.position.distanceTo(controls.target), modelMode === "wire");
+  document.body.classList.toggle("dark", picture.dark); // pale text over a dark picture
   renderViewer(now);
 });

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { showSketches } from "../sketchbook.js";
 import {
   reseed,
   rand,
@@ -931,6 +932,8 @@ function useThing(name) {
   }
   used.add(name);
   things[name].userData.dot.visible = false;
+  // the sketches: a few real pages from the sketchbook come up on the screen
+  if (name === "sketches") showSketches();
   events.push({ caption: { time: CLOCK[used.size - 1], line: LINES[name] } });
 }
 

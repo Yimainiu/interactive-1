@@ -336,6 +336,122 @@ body.dark #frame {
   opacity: 0.65;
 }
 
+/* ---------- the studio's sketches ---------- */
+
+#sketchbook {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(36 18 12 / 0);
+  transition: background 0.6s ease;
+}
+
+#sketchbook.open {
+  background: rgb(36 18 12 / 0.72);
+}
+
+#sketchbook[hidden] {
+  display: none;
+}
+
+.sketchbook-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  width: min(1000px, 100%);
+}
+
+/* a page is about 1.55 times as wide as it is tall; keep the pile inside the screen */
+.sketch-pile {
+  position: relative;
+  width: min(100%, calc((100vh - 11rem) * 1.546));
+  aspect-ratio: 1600 / 1035;
+  cursor: pointer;
+}
+
+.sketch {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(36 18 12 / 0.25), 0 10px 30px rgb(36 18 12 / 0.35);
+  transform: translateY(40vh) rotate(calc(var(--r) * 3));
+  opacity: 0;
+  transition: transform 0.45s ease, opacity 0.45s ease;
+}
+
+/* the pages land one after another, as if dropped onto the desk */
+#sketchbook.open .sketch {
+  transform: rotate(var(--r));
+  opacity: 1;
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.25, 1) var(--d), opacity 0.4s ease var(--d);
+}
+
+/* the top page slides off to the side, then goes under the pile */
+#sketchbook.open .sketch.leaving {
+  transform: translateX(70%) rotate(8deg);
+  opacity: 0;
+  transition: transform 0.45s ease-in, opacity 0.45s ease-in;
+}
+
+.sketch img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.sketch-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 1.3rem;
+  line-height: 1;
+  background: var(--paper);
+}
+
+.sketch-caption,
+.sketch-hint {
+  margin: 0;
+  color: var(--paper);
+  text-align: center;
+}
+
+.sketch-caption {
+  padding: 0 2.6rem; /* clear of the close button */
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem 1.2rem;
+  font-size: 1rem;
+}
+
+.sketch-title {
+  font-style: italic;
+}
+
+.sketch-date,
+.sketch-count {
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.sketch-hint {
+  font-size: 0.72rem;
+  opacity: 0.65;
+}
+
 /* ---------- scene title card ---------- */
 
 #slate {

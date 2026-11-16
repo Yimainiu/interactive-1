@@ -449,7 +449,15 @@ async function openingCard(key) {
   slate.classList.add("project");
   slate.querySelector(".slate-number").textContent = "";
   slate.querySelector(".slate-title").textContent = PROJECT.title;
-  slate.querySelector(".slate-line").textContent = PROJECT.line;
+  // the subtitle in two lines, split at its dash
+  const line = slate.querySelector(".slate-line");
+  line.replaceChildren(
+    ...PROJECT.line.split(" — ").map((part) => {
+      const span = document.createElement("span");
+      span.textContent = part;
+      return span;
+    }),
+  );
   slate.hidden = false;
   // it is simply there when the page opens: nothing fades or spreads in ("still" switches that off)
   slate.classList.add("instant", "show", "still");

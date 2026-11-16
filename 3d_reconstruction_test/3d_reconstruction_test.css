@@ -470,18 +470,35 @@ body.ending #hint {
   display: none;
 }
 
-/* the project's name on page load: a longer title, so a little smaller,
-   and a larger subtitle, so the two read as one name (about 2.6 : 1) */
+/* the project's name on page load: a longer title, so a little smaller;
+   the subtitle under it is large too, in two lines (about 1.9 : 1) */
+#slate.project {
+  gap: 1.4rem;
+}
+
 #slate.project .slate-title {
   font-size: clamp(2rem, 5.4vw, 3.9rem);
   text-wrap: balance;
 }
 
+#slate.project.show .slate-rule {
+  width: min(26rem, 70vw);
+}
+
 #slate.project .slate-line {
   max-width: min(60rem, 92vw);
-  font-size: clamp(1.05rem, 2.2vw, 1.5rem);
-  line-height: 1.35;
+  font-size: clamp(1.2rem, 2.9vw, 2.05rem);
+  line-height: 1.3;
   text-wrap: balance;
+}
+
+#slate.project .slate-line span {
+  display: block;
+}
+
+/* "documenting ..." sits a little under "An interactive poem" */
+#slate.project .slate-line span + span {
+  margin-top: 0.2em;
 }
 
 /* ... and it is there from the start, with none of the card's usual arriving */

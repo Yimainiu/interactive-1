@@ -612,7 +612,7 @@ body.ending #hint {
   display: block;
 }
 
-/* "documenting ..." sits a little under "An interactive poem" */
+/* "Documenting ..." sits a little under "An Interactive Poem" */
 #slate.project .slate-line span + span {
   margin-top: 0.2em;
 }

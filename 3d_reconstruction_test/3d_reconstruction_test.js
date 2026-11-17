@@ -420,7 +420,7 @@ function sceneEvent(e) {
 
 const PROJECT = {
   title: "Before the Shadow Settles",
-  line: "An interactive poem — documenting an industrial design student’s life at CCA",
+  line: "An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA",
 };
 const CARD_SWAP = 2000; // the type fading and the rules drawing back in, per the CSS
 

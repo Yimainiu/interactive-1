@@ -5,7 +5,7 @@
 ## 项目名称
 
 **Before the Shadow Settles**
-An interactive poem — documenting an industrial design student’s life at CCA
+An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
 
 "3D Reconstruction Test" 是文件夹名（和主页上的链接文字）；网页标题和左上角面板用的是正式名称 "Before the Shadow Settles"。
 

@@ -342,9 +342,6 @@ function buildStreet() {
   car(26.5, "suv", "#f0f1f0");
   car(29.1, "sedan", "#2a2c30");
 
-  // someone heading for the door
-  standingPerson(layers.people, -1.3, 1.1, 35, "#2a2d33", "#3a3f4a").position.y = WALK.height;
-
   buildCamp();
 }
 
@@ -568,6 +565,8 @@ export default {
   // title card shown before the scene opens
   card: { number: "Scene One", title: "Old Gate", line: "The small side entrance, off the parking lot." },
   intro: "drone",
+  // after the drone photo, the scene settles on this view
+  start: "door",
   layers: [
     { key: "cars", label: "Cars" },
     { key: "trees", label: "Trees" },
@@ -589,6 +588,8 @@ export default {
     drone: { label: "Drone", pos: DRONE, target: aim(DRONE, -10.6, 26.7), photo: { fov: 43, aspect: 16 / 9, name: "DJI_0007", src: "photos/old_gate.jpg" } },
     // iPhone 16 Pro main camera: 24 mm equiv., 4:3 photos
     street: { label: "Street", pos: STREET, target: aim(STREET, 0, 5.4), photo: { fov: 56.8, aspect: 4 / 3, name: "IMG_4594", src: "photos/old_gate_street.jpg" } },
+    // where the scene opens: across the lot, square on to the lit door
+    door: { label: "Door", pos: [-0.9, 4.6, 27], target: [-0.9, 1.9, 0], fov: 50 },
     overview: { label: "Overview", pos: [-28, 24, 36], target: [0, 2, 0], fov: 45 },
     plan: { label: "Plan", pos: [0, 80, -1.99], target: [0, 0, -2], fov: 45 },
   },

@@ -290,9 +290,12 @@ async function switchScene(key) {
 // ends the sequence early (a click or a drag); the new scene still shows
 function stopIntro() {
   if (!intro) return;
+  const def = SCENES[intro.key];
   if (active !== intro.key) {
     showScene(intro.key);
-    goTo(SCENES[intro.key].intro, true);
+    goTo(def.start || def.intro, true);
+  } else if (def.start) {
+    goTo(def.start); // from the photo's view, glide over to where the scene opens
   }
   intro = null;
   setModel(modelMode);
@@ -349,7 +352,7 @@ async function showCard(key, instant = false, hold = SLATE_HOLD) {
 // open on the scene behind the card and fade the card away
 async function hideCard(key) {
   showScene(key);
-  goTo(SCENES[key].intro, true);
+  goTo(SCENES[key].start || SCENES[key].intro, true);
   setModel(modelMode);
   slate.classList.remove("instant", "show");
   await wait(SLATE_OUT);

@@ -9,7 +9,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
    can still be dragged to look around and scrolled to zoom.
    Objects with userData.marker = true (things a scene handles itself,
    through userData.action) get the same marker; the scene can hide it
-   with obj.userData.dot.visible.
+   with obj.userData.dot.visible. The marker sits above the object, or at
+   obj.userData.dotAt ([x, y, z] in the scene) when that is set.
 ------------------------------------------------------------------- */
 
 const viewer = document.querySelector("#viewer");
@@ -150,7 +151,9 @@ export function addMarkers(scene) {
   scene.userData.markers = found.map((obj) => {
     const box = new THREE.Box3().setFromObject(obj);
     const sprite = new THREE.Sprite(markerMat);
-    sprite.position.set((box.min.x + box.max.x) / 2, box.max.y + 0.25, box.max.z + 0.1);
+    // above the object, unless it names its own spot (userData.dotAt, in world units)
+    if (obj.userData.dotAt) sprite.position.set(...obj.userData.dotAt);
+    else sprite.position.set((box.min.x + box.max.x) / 2, box.max.y + 0.25, box.max.z + 0.1);
     sprite.userData.markerOf = obj;
     sprite.renderOrder = 10;
     obj.userData.dot = sprite;

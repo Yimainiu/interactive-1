@@ -23,7 +23,7 @@ An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
 
 ## 文件结构
 
-- `3d_reconstruction_test.html`：页面结构和左侧面板，包括 Scene、Display、Style、View、Show。three.js 通过 importmap 从 CDN 加载，不需要安装任何东西。
+- `3d_reconstruction_test.html`：页面结构和左侧面板，包括 Scene、Display、Style、View、Show。面板右上角的 Hide 按钮（`#controls-toggle`）可以把面板收成左下角的一个 "Show controls" 小按钮，收起状态记在浏览器的 localStorage 里。three.js 通过 importmap 从 CDN 加载，不需要安装任何东西。
 - `3d_reconstruction_test.js`：主程序，负责渲染器、相机、视角切换、照片和模型的切换、面板，以及点门进入下一个场景（portal）。
 - `3d_reconstruction_test.css`：样式。
 - 开场顺序：先在白屏上显示项目名（`PROJECT`，在主程序里），停住等点击（或按 Enter / 空格）；点击后换成第 1 幕的标题卡，同样等点击才进入场景。直接带视角的链接（如 `#gate/street`）会跳过开场。
@@ -52,7 +52,7 @@ An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
 - `title`、`card`：切换场景时显示的标题卡片。
 - `layers: [{ key, label }]`：对应面板 Show 下面的复选框。物体建在 `layers.<key>` 里就能被这个复选框开关。要删掉一个选项，就把这一项和所有用到它的代码一起删掉。
 - `views`：相机视角。带 `photo` 的视角会对准原照片的拍摄位置，`fov` 和 `aspect` 按相机参数设置。
-- `intro`：开场先显示哪个视角的照片（标题卡背景也用它）。可选的 `start`：照片淡出后镜头停在哪个视角，不写就停在 `intro`。Old Gate 的 `start` 是 `door`（从停车场正对亮着的门）。
+- `intro`：开场先显示哪个视角的照片（标题卡背景也用它）。可选的 `start`：照片淡出后镜头停在哪个视角，不写就停在 `intro`。Old Gate 的 `start` 是 `door`（从停车场正对亮着的门），Main Gate 的 `start` 是 `walk`（站在院子里，左边是 CCA 的玻璃立面，前方是围栏和门）。
 - `build()`：先调用 `reseed(n)`，再按顺序构建场景。场景自己建灯光。
 - `mood`：这个场景的天气，交给 `atmosphere.js`（再由当前的画法去画，见下面"画法的约定"）。包括 `sky`（`top` / `horizon` / `ground` 三个颜色）、`fog`（`color`、`near`、`far`，以及 `ref`：这组雾是按相机离目标多远调的，拉远时雾会自动后退）、`grade`（`tint`、`saturation`、`grain`、`vignette`）和 `dark`（画面很暗时设为 true，页面上的散字会变成浅色）。场景可以在运行中改这个对象（工作室就是这样从傍晚变到夜里）。
 - 可选项：`ambience: { sound, layer }`（场景在屏幕上时播放的环境声；写了 `layer` 就只在这个图层打开时播放）；`hint`（右下角提示文字）；`enter()`（每次场景出现在屏幕上时调用）；`click(hit, ray, picked)`（点到的不是扫描物体或门时调用，`picked.action` 是点到的物体的 `userData.action`）；`update(camera, now)`（每帧调用）；`ending`（结局的镜头、消解中心和标题）；`reset()`（点 "Walk back in" 后复原）。

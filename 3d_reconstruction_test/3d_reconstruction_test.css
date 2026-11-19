@@ -48,6 +48,39 @@ body {
   bottom: 16px;
 }
 
+/* the panel's fold button sits in its top right corner, level with "Scene" */
+#controls-toggle {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* folded: only the button is left, as a small tab in the corner */
+#controls.folded {
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+#controls.folded > :not(#controls-toggle) {
+  display: none;
+}
+
+#controls.folded #controls-toggle {
+  position: static;
+  padding: 0.4rem 0.7rem;
+  background: var(--paper);
+}
+
+#controls.folded #controls-toggle:hover,
+#controls.folded #controls-toggle:focus-visible {
+  background: var(--coral);
+}
+
 #home {
   color: inherit;
   font-size: 0.8rem;

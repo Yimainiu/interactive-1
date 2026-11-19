@@ -916,6 +916,8 @@ export default {
   // title card shown before the scene opens
   card: { number: "Scene Three", title: "Main Gate", line: "Morning. The courtyard at the front of the school." },
   intro: "drone",
+  // after the drone photo, the scene settles on this view
+  start: "walk",
   ambience: { sound: "morning" }, // birds, and a little air
   // early morning: a pale, clean sky and a thin mist over the far end
   mood: {
@@ -962,6 +964,8 @@ export default {
       target: [3.64, 3.61, 21.59],
       photo: { fov: 22.25, aspect: 4 / 3, name: "IMG_4592", src: "photos/main_gate_garden.jpg" },
     },
+    // where the scene opens: down in the courtyard, the CCA glass on the left, the gate ahead
+    walk: { label: "Walk", pos: [2.6, 2.6, 20], target: [-6.5, -0.6, -10], fov: 55 },
     overview: { label: "Overview", pos: [55, 50, 55], target: [2, 0, 2], fov: 45 },
     plan: { label: "Plan", pos: [2, 120, 4.01], target: [2, 0, 4], fov: 45 },
   },

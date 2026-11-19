@@ -190,6 +190,27 @@ modeButtons.forEach((b) =>
   }),
 );
 
+// ---------- folding the panel away ----------
+
+const controlsPanel = document.querySelector("#controls");
+const controlsToggle = document.querySelector("#controls-toggle");
+function foldControls(folded) {
+  controlsPanel.classList.toggle("folded", folded);
+  controlsToggle.textContent = folded ? "Show controls" : "Hide";
+  controlsToggle.setAttribute("aria-expanded", String(!folded));
+  try {
+    localStorage.setItem("controls-folded", folded ? "1" : "");
+  } catch {
+    // no storage: the panel just opens unfolded next time
+  }
+}
+controlsToggle.addEventListener("click", () => foldControls(!controlsPanel.classList.contains("folded")));
+try {
+  if (localStorage.getItem("controls-folded")) foldControls(true);
+} catch {
+  // no storage: start unfolded
+}
+
 // ---------- style: how the picture is painted ----------
 
 function setStyle(key) {

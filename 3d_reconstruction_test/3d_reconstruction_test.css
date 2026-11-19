@@ -580,8 +580,10 @@ body.dark #frame {
 
 .slate-line {
   margin: 0;
+  max-width: 30rem; /* a longer line wraps into two even lines, inside the rules */
   font-size: clamp(0.85rem, 1.8vw, 1.05rem);
   font-style: italic;
+  text-wrap: balance;
   opacity: 0;
   transition: opacity 1s ease 1.1s;
 }

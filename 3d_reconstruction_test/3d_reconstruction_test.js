@@ -53,6 +53,7 @@ const sceneButtons = document.querySelectorAll("#scenes button");
 const modeButtons = document.querySelectorAll("#modes button");
 const styleBox = document.querySelector("#styles");
 const viewBox = document.querySelector("#views");
+const sceneLine = document.querySelector("#scene-line");
 const layerBox = document.querySelector("#layers");
 const hint = document.querySelector("#hint");
 const caption = document.querySelector("#caption");
@@ -247,6 +248,7 @@ function showScene(key) {
   active = key;
   sceneButtons.forEach((b) => b.classList.toggle("active", b.dataset.scene === key));
   hint.textContent = def.hint || HINT;
+  sceneLine.textContent = def.card.line;
   hideCaption();
   def.enter?.(); // the scene starts over (the studio goes back to dusk)
 

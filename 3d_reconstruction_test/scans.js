@@ -11,7 +11,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
    through userData.action) get the same marker; the scene can hide it
    with obj.userData.dot.visible. The marker sits above the object, or at
    obj.userData.dotAt ([x, y, z] in the scene) when that is set.
-   A scan with a `voice` also speaks a line over and over while it is open.
+   A scan with a `voice` also speaks a line over and over while it is open,
+   and its `onClose()` is called when the pop-up closes.
 ------------------------------------------------------------------- */
 
 const viewer = document.querySelector("#viewer");
@@ -80,6 +81,7 @@ function load(src) {
 }
 
 let opening = null;
+let openScanData = null; // the scan in the pop-up, for its onClose
 
 // a scan can carry a voice: { line, after, gap }. Once the pop-up has been open for
 // `after` ms, the browser's own speech says `line`, again and again (`gap` ms between),
@@ -110,6 +112,7 @@ export async function openScan(scan) {
   const run = {};
   stopVoice();
   opening = run;
+  openScanData = scan;
   startVoice(scan.voice, run);
   viewerTitle.textContent = scan.title;
   viewerNote.textContent = scan.note || "";
@@ -132,9 +135,12 @@ export async function openScan(scan) {
 }
 
 export function closeScan() {
+  const was = isOpen() ? openScanData : null;
   opening = null;
+  openScanData = null;
   stopVoice();
   viewer.hidden = true;
+  was?.onClose?.(); // the scene can follow up once the pop-up is gone
 }
 
 export const isOpen = () => !viewer.hidden;

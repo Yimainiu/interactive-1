@@ -61,6 +61,7 @@ const DOOR = { w: 3.4, h: 3.3, depth: 0.6 }; // the recessed entrance bay
 let scene;
 let layers; // groups the panel can show or hide
 let trees = []; // they move in the wind that slants the rain
+let entry = null; // the card reader and the doorway: the glowing dot moves from one to the other
 
 /* ==================================================================
    GROUND
@@ -205,6 +206,9 @@ function buildBuilding() {
   );
   doorway.position.set(0, y0 + 1.475, -DOOR.depth + 0.14); // clear of the handles, so they don't block a click
   doorway.userData.portal = { to: "studio" }; // the card comes from the studio scene
+  // its glowing dot, on the handles, only comes on once the ID card has been looked at
+  doorway.userData.marker = true;
+  doorway.userData.dotAt = [0, y0 + 1.17, fz + 0.15];
   scene.add(doorway);
 
   // lamp in the bay ceiling, signs and boxes on the wall
@@ -222,11 +226,21 @@ function buildBuilding() {
     note: "3D scan of the card you tap on this reader to get in.",
     // ten seconds in, a voice starts saying this, over and over, until the pop-up closes
     voice: { line: "Let us say hello to CCA.", after: 10000, gap: 2500 },
+    // card seen: the dot leaves the reader for the door
+    onClose: () => showDoorDot(true),
   };
   reader.userData.dotAt = [1.6, y0 + 1.24, 0.12]; // the glowing dot sits just left of the reader
   scene.add(reader);
   box(reader, 0.09, 0.14, 0.03, C.black, 1.8, y0 + 1.22, 0.015); // card reader
   box(reader, 0.13, 0.06, 0.02, "#2f5fb3", 1.8, y0 + 1.1, 0.01); // "activate switch" label
+  entry = { reader, doorway };
+}
+
+// the glowing dot is on the card reader first, then on the door (the dots exist once the page has built the scene)
+function showDoorDot(onDoor) {
+  if (!entry?.reader.userData.dot) return;
+  entry.reader.userData.dot.visible = !onDoor;
+  entry.doorway.userData.dot.visible = onDoor;
 }
 
 /* ==================================================================
@@ -608,6 +622,11 @@ export default {
     buildPuddles();
     buildRain();
     return scene;
+  },
+
+  // each time the scene comes on screen: the dot starts back on the card reader
+  enter() {
+    showDoorDot(false);
   },
 
   // called every frame

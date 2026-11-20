@@ -23,7 +23,7 @@ An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
 
 ## 文件结构
 
-- `3d_reconstruction_test.html`：页面结构和左侧面板，包括 Scene、Display、Style、View、Show。面板右上角的 Hide 按钮（`#controls-toggle`）可以把面板收成左下角的一个 "Show controls" 小按钮，收起状态记在浏览器的 localStorage 里。three.js 通过 importmap 从 CDN 加载，不需要安装任何东西。
+- `3d_reconstruction_test.html`：页面结构和左侧面板，包括 Scene、Display、Style、View、Show。面板右上角的 Hide 按钮（`#controls-toggle`）可以把面板收成左下角的一个 "Show controls" 小按钮。面板默认是收起的；看的人展开过，就记在浏览器的 localStorage 里（`controls-open`），下次打开还是展开。three.js 通过 importmap 从 CDN 加载，不需要安装任何东西。
 - `3d_reconstruction_test.js`：主程序，负责渲染器、相机、视角切换、照片和模型的切换、面板，以及点门进入下一个场景（portal）。
 - `3d_reconstruction_test.css`：样式。
 - 开场顺序：先在白屏上显示项目名（`PROJECT`，在主程序里），停住等点击（或按 Enter / 空格）；点击后换成第 1 幕的标题卡，同样等点击才进入场景。直接带视角的链接（如 `#gate/street`）会跳过开场。

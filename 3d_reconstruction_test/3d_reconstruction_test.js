@@ -200,16 +200,17 @@ function foldControls(folded) {
   controlsToggle.textContent = folded ? "Show controls" : "Hide";
   controlsToggle.setAttribute("aria-expanded", String(!folded));
   try {
-    localStorage.setItem("controls-folded", folded ? "1" : "");
+    localStorage.setItem("controls-open", folded ? "" : "1");
   } catch {
-    // no storage: the panel just opens unfolded next time
+    // no storage: the panel just starts folded next time
   }
 }
 controlsToggle.addEventListener("click", () => foldControls(!controlsPanel.classList.contains("folded")));
+// folded unless this viewer opened it last time
 try {
-  if (localStorage.getItem("controls-folded")) foldControls(true);
+  if (localStorage.getItem("controls-open")) foldControls(false);
 } catch {
-  // no storage: start unfolded
+  // no storage: stay folded
 }
 
 // ---------- style: how the picture is painted ----------

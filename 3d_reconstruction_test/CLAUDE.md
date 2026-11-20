@@ -34,7 +34,7 @@ An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
   - `starry_night.js`（Starry Night）：梵高式的厚涂油画。天空卷成漩涡，有带光环的星星和一弯月亮；整幅画由顺着形状走的笔触铺成，平的地方用长笔触，有细节的地方用小笔触，颜料有厚度。
   - `deep_sea.js`（Deep Sea）：水下的粒子水墨。冷流是蓝到绿，暖流是紫到橙到金；物体的轮廓顺着水流散成颗粒，亮处发光，有向上漂的光点、顺流的金粉和从水面照下来的光柱。
 - `ambience.js`：在浏览器里实时合成的环境声，不用音频文件：`rain`（雨声）、`room`（傍晚空楼里的低鸣）、`morning`（清晨的鸟叫和一点风）。浏览器要求先有点击或按键才能出声，所以第一次点击时才会启动；每种声音第一次用到时才生成。
-- `scans.js`：3D 扫描弹窗。场景里只要有物体带 `userData.scan = { src, title, note }`，就会出现发光的小点，点开后加载对应的 `.glb`。带 `userData.marker = true` 的物体也有同样的小点（配合 `userData.action`，点击交给场景自己的 `click()` 处理），场景可以用 `obj.userData.dot.visible` 把小点藏起来。小点默认在物体正上方，设了 `userData.dotAt = [x, y, z]` 就放在这个位置（Old Gate 门右边的读卡器就是这样把小点放在读卡器左边）。
+- `scans.js`：3D 扫描弹窗。场景里只要有物体带 `userData.scan = { src, title, note }`，就会出现发光的小点，点开后加载对应的 `.glb`。带 `userData.marker = true` 的物体也有同样的小点（配合 `userData.action`，点击交给场景自己的 `click()` 处理），场景可以用 `obj.userData.dot.visible` 把小点藏起来。小点默认在物体正上方，设了 `userData.dotAt = [x, y, z]` 就放在这个位置（Old Gate 门右边的读卡器就是这样把小点放在读卡器左边）。扫描还可以带 `voice: { line, after, gap }`：弹窗打开 `after` 毫秒后，用浏览器自带的语音合成（speechSynthesis，不用音频文件）反复念 `line`，每遍之间停 `gap` 毫秒，关掉弹窗就停。读卡器的学生证弹窗 10 秒后会反复说 "Let us say hello to CCA."。
 - `sketchbook.js`：工作室里点草图（sketches）后弹出的草图页。`PAGES` 里列着要展示的几页（图片在 `sketches/`，从用户 9 月 17 日和 9 月 24 日的草图本里选的，已经压缩并加深了铅笔线），点最上面一页它会滑走、压到最下面，Esc 或 × 收起。由 `id_studio.js` 的 `useThing("sketches")` 调用 `showSketches()`。
 - `#caption`：屏幕下方的一行"诗句"（时刻加一句话），由场景在时间推进时发出。
 - `scenes/lowpoly.js`：所有场景共用的建模工具，包括 `box`、`cyl`、`bar`、`place`、`makeLayers`、`standingPerson`、`rand`/`reseed` 等。单位是米。

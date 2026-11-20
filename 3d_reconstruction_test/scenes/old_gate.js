@@ -220,6 +220,8 @@ function buildBuilding() {
     src: "models/access_card.glb",
     title: "Student ID card",
     note: "3D scan of the card you tap on this reader to get in.",
+    // ten seconds in, a voice starts saying this, over and over, until the pop-up closes
+    voice: { line: "Let us say hello to CCA.", after: 10000, gap: 2500 },
   };
   reader.userData.dotAt = [1.6, y0 + 1.24, 0.12]; // the glowing dot sits just left of the reader
   scene.add(reader);

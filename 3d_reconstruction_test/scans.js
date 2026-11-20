@@ -11,6 +11,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
    through userData.action) get the same marker; the scene can hide it
    with obj.userData.dot.visible. The marker sits above the object, or at
    obj.userData.dotAt ([x, y, z] in the scene) when that is set.
+   A scan with a `voice` also speaks a line over and over while it is open.
 ------------------------------------------------------------------- */
 
 const viewer = document.querySelector("#viewer");
@@ -80,9 +81,36 @@ function load(src) {
 
 let opening = null;
 
+// a scan can carry a voice: { line, after, gap }. Once the pop-up has been open for
+// `after` ms, the browser's own speech says `line`, again and again (`gap` ms between),
+// until the pop-up closes. No audio file: it is the voice the viewer's system has.
+let voiceTimer = 0;
+function startVoice(voice, run) {
+  if (!voice || !window.speechSynthesis) return;
+  const say = () => {
+    if (opening !== run) return;
+    const words = new SpeechSynthesisUtterance(voice.line);
+    words.lang = "en-US";
+    words.rate = 0.9;
+    const english = speechSynthesis.getVoices().find((v) => v.lang === "en-US" && v.localService);
+    if (english) words.voice = english;
+    words.onend = words.onerror = () => {
+      if (opening === run) voiceTimer = setTimeout(say, voice.gap ?? 2500);
+    };
+    speechSynthesis.speak(words);
+  };
+  voiceTimer = setTimeout(say, voice.after ?? 10000);
+}
+function stopVoice() {
+  clearTimeout(voiceTimer);
+  window.speechSynthesis?.cancel();
+}
+
 export async function openScan(scan) {
   const run = {};
+  stopVoice();
   opening = run;
+  startVoice(scan.voice, run);
   viewerTitle.textContent = scan.title;
   viewerNote.textContent = scan.note || "";
   viewerStatus.textContent = "Loading…";
@@ -105,6 +133,7 @@ export async function openScan(scan) {
 
 export function closeScan() {
   opening = null;
+  stopVoice();
   viewer.hidden = true;
 }
 

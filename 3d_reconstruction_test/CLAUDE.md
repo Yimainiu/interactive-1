@@ -49,7 +49,7 @@ An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
 
 每个场景文件 `export default` 一个对象，包含这些内容：
 
-- `title`、`card`：切换场景时显示的标题卡片。`card.number` 是标题上方那行小字，现在写的是时刻和这一幕的阶段：Old Gate 是 "Afternoon – Arrival & First Day"，ID Studio 是 "Night – Making & Remaking"（大二左右，学习的中期），Main Gate 是 "Morning – Leave & Graduation"。`card.line` 同时也是左上角面板标题下面的那句介绍，跟着当前场景变（`#scene-line`）。
+- `title`、`card`：切换场景时显示的标题卡片。`card.number` 是标题上方那行小字，现在写的是时刻和这一幕的阶段：Old Gate 是 "Afternoon – Arrival & First Day"，ID Studio 是 "Night – The Middle Year"（大二左右，学习的中期），Main Gate 是 "Morning – Leave & Graduation"。`card.line` 同时也是左上角面板标题下面的那句介绍，跟着当前场景变（`#scene-line`）。
 - `layers: [{ key, label }]`：对应面板 Show 下面的复选框。物体建在 `layers.<key>` 里就能被这个复选框开关。要删掉一个选项，就把这一项和所有用到它的代码一起删掉。
 - `views`：相机视角。带 `photo` 的视角会对准原照片的拍摄位置，`fov` 和 `aspect` 按相机参数设置。
 - `intro`：开场先显示哪个视角的照片（标题卡背景也用它）。可选的 `start`：照片淡出后镜头停在哪个视角，不写就停在 `intro`。Old Gate 的 `start` 是 `door`（从停车场正对亮着的门），Main Gate 的 `start` 是 `walk`（站在院子里，左边是 CCA 的玻璃立面，前方是围栏和门）。

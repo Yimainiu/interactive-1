@@ -12,7 +12,6 @@ import {
   batch,
   facetedGround,
   makeLayers,
-  standingPerson,
   dissolvable,
   shatterable,
 } from "./lowpoly.js";
@@ -61,7 +60,6 @@ const C = {
   leaf: "#7f9a4c",
   hedge: "#405a35",
   sign: "#e0604a",
-  flag: "#c2307a",
   carGlass: "#2b333b",
   tyre: "#1f1f21",
 };
@@ -82,7 +80,6 @@ const GATE = { x0: 2.5, x1: 5.3 }; // the walk-through gate in the fence, betwee
 
 let scene;
 let layers; // groups the panel can show or hide
-let banners = []; // they stir in the morning air
 let trees = [];
 let grasses = []; // { mesh, top }: the tufts of a planted bed, and the height they grow from
 
@@ -343,21 +340,6 @@ function buildPlaza() {
   rail.box(0.3, 1.0, z1 - railEnd, C.concrete, x0 + 0.15, y, (railEnd + z1) / 2);
   rail.addTo(scene, true);
 
-  // banners standing on the plaza
-  for (const [x, z] of [[18, -4], [24, -4], [30, -4], [36, -4]]) flag(x, y, z);
-}
-
-// teardrop banner on a pole
-function flag(x, y, z) {
-  cyl(layers.people, 0.025, 0.025, 3.2, 5, "#9aa0a3", x, y, z);
-  const shape = new THREE.Shape();
-  shape.moveTo(0, 0);
-  shape.quadraticCurveTo(0.55, 1.2, 0.05, 2.6);
-  shape.lineTo(0, 2.6);
-  const banner = new THREE.Mesh(new THREE.ShapeGeometry(shape), mat(C.flag, { side: THREE.DoubleSide }));
-  banner.position.set(x, y + 0.5, z);
-  layers.people.add(banner);
-  banners.push(banner);
 }
 
 // the bridge across the +z end, deck level with the plaza, a passage underneath
@@ -541,16 +523,6 @@ function buildCourtyard() {
     const leaf = box(sign, 0.62, 0.95, 0.03, C.sign, 0, 0, s * 0.17);
     leaf.rotation.x = s * 0.18;
   }
-  // banners in front of the plaza wall
-  for (const z of [2.5, 4.0, 5.5]) flag(10.3, 0, z);
-  blocked(10.2, 10.9, 2.4, 5.6);
-
-  // people
-  standingPerson(layers.people, -3.5, 19, 200, "#2c3a52", "#c9b79b");
-  standingPerson(layers.people, -2.8, -9, 30, "#3d4a37", "#202226");
-  blocked(-3.75, -3.25, 18.75, 19.25);
-  blocked(-3.05, -2.55, -9.25, -8.75);
-  standingPerson(layers.people, 22, 0, 120, "#6a2f2f", "#33363d").position.y = PLAZA.y;
 }
 
 /* ==================================================================
@@ -914,11 +886,10 @@ function buildLights() {
   scene.add(fill);
 }
 
-// the morning air: banners turn a little on their poles, the young trees sway,
+// the morning air: the young trees sway,
 // and the grass leans over in waves that cross the beds
 function stir(now) {
   const t = now / 1000;
-  banners.forEach((b, i) => (b.rotation.y = Math.sin(t * 1.3 + i * 1.7) * 0.22 + Math.sin(t * 3.1 + i) * 0.06));
   trees.forEach((g, i) => {
     g.rotation.z = Math.sin(t * 0.8 + i * 2.1) * 0.012;
     g.rotation.x = Math.sin(t * 0.6 + i * 1.3) * 0.009;
@@ -965,7 +936,6 @@ export default {
   layers: [
     { key: "cars", label: "Cars" },
     { key: "plants", label: "Trees & plants" },
-    { key: "people", label: "People & flags" },
     { key: "neighbours", label: "Neighbours" },
   ],
   views: {
@@ -1000,7 +970,6 @@ export default {
     reseed(5);
     scene = new THREE.Scene();
     layers = makeLayers(scene, this.layers);
-    banners = [];
     trees = [];
     grasses = [];
     buildLights();
@@ -1029,10 +998,10 @@ export default {
   // pointer (or null), `ray` the pointer's ray
   click(hit, ray) {
     if (walker.leaving) return;
-    let through = false; // trees, people, cars and the walker: walk to the paving behind them
+    let through = false; // trees, cars and the walker: walk to the paving behind them
     for (let o = hit?.object; o; o = o.parent) {
       if (o.userData.action === "leave") return leave();
-      if (o.userData.action === "walker" || [layers.plants, layers.people, layers.cars].includes(o)) through = true;
+      if (o.userData.action === "walker" || [layers.plants, layers.cars].includes(o)) through = true;
     }
     let p = null;
     if (hit && !through) {

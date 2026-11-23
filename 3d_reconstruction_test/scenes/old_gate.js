@@ -579,7 +579,7 @@ const STREET = [-0.5, 1.5, 7];
 export default {
   title: "Old Gate",
   // title card shown before the scene opens
-  card: { number: "Scene One", title: "Old Gate", line: "The first time I walked into CCA, it was through this door, on my way to new student orientation." },
+  card: { number: "Afternoon – Arrival & First Day", title: "Old Gate", line: "The first time I walked into CCA, it was through this door, on my way to new student orientation." },
   intro: "drone",
   // after the drone photo, the scene settles on this view
   start: "door",

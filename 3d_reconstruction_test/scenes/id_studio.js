@@ -1033,7 +1033,7 @@ const IPHONE = { fov: 55.87, aspect: 4 / 3 };
 export default {
   title: "ID Studio",
   // title card shown before the scene opens
-  card: { number: "Scene Two", title: "ID Studio", line: "Through the old gate, into the studio." },
+  card: { number: "Night – Making & Remaking", title: "ID Studio", line: "Through the old gate, into the studio." },
   intro: "windows",
   hint: "Click the glowing dots · drag to orbit · scroll to zoom",
   ambience: { sound: "room" }, // the hum of the empty building

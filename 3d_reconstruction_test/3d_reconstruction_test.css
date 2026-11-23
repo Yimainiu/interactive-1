@@ -559,6 +559,13 @@ body.dark #frame {
   font-size: clamp(0.75rem, 1.6vw, 0.95rem);
   letter-spacing: 0.5em;
   text-transform: uppercase;
+  text-wrap: balance; /* "Afternoon – Arrival & First Day" breaks into two even lines on a phone */
+}
+
+@media (max-width: 600px) {
+  .slate-number {
+    letter-spacing: 0.3em;
+  }
 }
 
 .slate-title {

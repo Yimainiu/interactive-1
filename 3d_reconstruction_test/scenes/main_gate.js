@@ -940,7 +940,7 @@ function stir(now) {
 export default {
   title: "Main Gate",
   // title card shown before the scene opens
-  card: { number: "Scene Three", title: "Main Gate", line: "Morning. The courtyard at the front of the school." },
+  card: { number: "Morning – Leave & Graduation", title: "Main Gate", line: "Morning. The courtyard at the front of the school." },
   intro: "drone",
   // after the drone photo, the scene settles on this view
   start: "walk",

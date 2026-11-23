@@ -225,6 +225,10 @@ function buildCCA() {
 function buildTimber() {
   const { x0, x1, z0, z1, floors } = TIMBER;
   const top = floors[floors.length - 1];
+  // all of it in one group, so it can rise out of the ground (see stepTimber)
+  const T = new THREE.Group();
+  scene.add(T);
+  rising = { group: T, depth: top + 0.5, level: 0 };
   const parts = batch();
   parts.box(x1 - x0 - 1.4, top - 0.4, z1 - z0 - 1.4, C.timberGlass, (x0 + x1) / 2, 0, (z0 + z1) / 2);
   for (const y of floors.slice(1)) {
@@ -234,23 +238,45 @@ function buildTimber() {
   // columns on the two faces that meet at the courtyard corner (x0, z1)
   for (let x = x0; x <= x1 + 0.01; x += 4.1) parts.box(0.35, top, 0.35, C.black, x, 0, z1);
   for (let z = z1; z >= z0 - 0.01; z -= 4.6) parts.box(0.35, top, 0.35, C.black, x0, 0, z);
-  parts.addTo(scene, true);
+  parts.addTo(T, true);
 
   // X-braces in every other bay, from the plaza level up
   for (let f = 1; f < floors.length - 1; f++) {
     const y0 = floors[f];
     const y1 = floors[f + 1] - 0.3;
     for (let x = x0; x < x1 - 1; x += 8.2) {
-      bar(scene, [x, y0, z1 + 0.2], [x + 4.1, y1, z1 + 0.2], 0.18, C.black);
-      bar(scene, [x + 4.1, y0, z1 + 0.2], [x, y1, z1 + 0.2], 0.18, C.black);
+      bar(T, [x, y0, z1 + 0.2], [x + 4.1, y1, z1 + 0.2], 0.18, C.black);
+      bar(T, [x + 4.1, y0, z1 + 0.2], [x, y1, z1 + 0.2], 0.18, C.black);
     }
     for (let z = z1; z > z0 + 1; z -= 9.2) {
-      bar(scene, [x0 - 0.2, y0, z], [x0 - 0.2, y1, z - 4.6], 0.18, C.black);
-      bar(scene, [x0 - 0.2, y0, z - 4.6], [x0 - 0.2, y1, z], 0.18, C.black);
+      bar(T, [x0 - 0.2, y0, z], [x0 - 0.2, y1, z - 4.6], 0.18, C.black);
+      bar(T, [x0 - 0.2, y0, z - 4.6], [x0 - 0.2, y1, z], 0.18, C.black);
     }
   }
   // balcony rail at the plaza level, along the courtyard face
-  box(scene, 0.06, 1.0, z1 - z0, C.black, x0 - 0.3, floors[1], (z0 + z1) / 2);
+  box(T, 0.06, 1.0, z1 - z0, C.black, x0 - 0.3, floors[1], (z0 + z1) / 2);
+}
+
+// the timber building waits under the ground until the walker comes near its corner,
+// then rises into place
+let rising = null;
+let lastRise = 0;
+const RISE = { near: 5, secs: 4 }; // how close the walker must come (m), how long it takes to rise
+function sinkTimber() {
+  rising.level = 0;
+  rising.on = false;
+  rising.group.position.y = -rising.depth;
+  rising.group.visible = false;
+}
+function stepTimber(dt) {
+  if (!rising.on && walker.x > TIMBER.x0 - RISE.near && walker.z < TIMBER.z1 + RISE.near) {
+    rising.on = true;
+    rising.group.visible = true;
+  }
+  if (!rising.on || rising.level >= 1) return;
+  rising.level = Math.min(1, rising.level + dt / RISE.secs);
+  const ease = 1 - (1 - rising.level) ** 3; // fast out of the ground, settling at the top
+  rising.group.position.y = -rising.depth * (1 - ease);
 }
 
 // the raised plaza east of the courtyard: concrete wall, railing, lawn, patterned paving
@@ -1024,12 +1050,21 @@ export default {
   // called every frame; returns "leave" when the walker has stepped out of the gate
   update(camera, now) {
     stir(now);
-    return stepWalker(now);
+    const leave = stepWalker(now);
+    stepTimber(Math.min((now - (lastRise || now)) / 1000, 0.05));
+    lastRise = now;
+    return leave;
+  },
+
+  // each time the scene comes on screen, the timber building is back under the ground
+  enter() {
+    sinkTimber();
   },
 
   // back to the start, after the goodbye
   reset() {
     resetWalker();
+    sinkTimber();
     if (ring) ring.visible = false;
   },
 };

@@ -519,9 +519,10 @@ function buildCourtyard() {
   // red A-frame sign on the paving
   const sign = place(scene, 3.4, 12.3, 0);
   blocked(3.05, 3.75, 12.0, 12.6);
+  // two leaves leaning together: they meet along the top and stand apart on the ground, like an A
   for (const s of [-1, 1]) {
-    const leaf = box(sign, 0.62, 0.95, 0.03, C.sign, 0, 0, s * 0.17);
-    leaf.rotation.x = s * 0.18;
+    const leaf = box(sign, 0.62, 0.95, 0.03, C.sign, 0, 0, s * 0.086);
+    leaf.rotation.x = -s * 0.18;
   }
 }
 

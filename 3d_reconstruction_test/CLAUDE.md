@@ -28,11 +28,12 @@ An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
 - `3d_reconstruction_test.css`：样式。
 - 开场顺序：先在白屏上显示项目名（`PROJECT`，在主程序里），停住等点击（或按 Enter / 空格）；点击后换成第 1 幕的标题卡，同样等点击才进入场景。直接带视角的链接（如 `#gate/street`）会跳过开场。
 - `atmosphere.js`：三个场景共用的画面和渲染流程。给每个场景加天空穹顶和雾，再按面板 Style 选中的画法（style）把整幅画面画到屏幕上。每个场景用自己的 `mood` 描述天气，这里每帧读取一次；同一种天气用哪种画法来画，由 style 决定。
-- `styles/`：四种画法，每种一个文件，面板 Style 里各有一个按钮。默认是 Paper。
+- `styles/`：五种画法，每种一个文件，面板 Style 里各有一个按钮。默认是 Paper。
   - `paper.js`（Paper）：原来的样子。把场景原样"印"在纸上：调色、降饱和、纸的纤维和颗粒、四角压暗。不给物体描边。
   - `little_prince.js`（Little Prince）：绘本水彩。颜色又薄又亮，线条像手画的一样微微歪斜，颜色在湿的地方晕开、在干的边缘积深，四周留出白纸；天空里画着黄色的星星和几颗小行星。
   - `starry_night.js`（Starry Night）：梵高式的厚涂油画。天空卷成漩涡，有带光环的星星和一弯月亮；整幅画由顺着形状走的笔触铺成，平的地方用长笔触，有细节的地方用小笔触，颜料有厚度。
   - `deep_sea.js`（Deep Sea）：水下的粒子水墨。冷流是蓝到绿，暖流是紫到橙到金；物体的轮廓顺着水流散成颗粒，亮处发光，有向上漂的光点、顺流的金粉和从水面照下来的光柱。
+  - `mosaic.js`（Mosaic）：参考 littleprince.dev 主视觉的小色块水彩（只借技法和配色，没有用它的素材）。物体由一个个不规则的小笔触（按 CSS 像素算的 Voronoi 格子，间距 `DAB`）拼成，每块颜色略有深浅冷暖，边缘积色、块与块之间露一点纸；块的中心落在物体上就盖满整块，所以轮廓是毛茸茸的。场景里本来就有细节的地方（比如墙上的字）让给原像素。天空不管几点都是深海军蓝水彩，带金色四角星（会闪）和细碎的小星点；`dark: true`。线框模式不画色块，线提亮到纸色。
 - `ambience.js`：在浏览器里实时合成的环境声，不用音频文件：`rain`（雨声）、`room`（傍晚空楼里的低鸣）、`morning`（清晨的鸟叫和一点风）。浏览器要求先有点击或按键才能出声，所以第一次点击时才会启动；每种声音第一次用到时才生成。
 - `scans.js`：3D 扫描弹窗。场景里只要有物体带 `userData.scan = { src, title, note }`，就会出现发光的小点，点开后加载对应的 `.glb`。带 `userData.marker = true` 的物体也有同样的小点（配合 `userData.action`，点击交给场景自己的 `click()` 处理），场景可以用 `obj.userData.dot.visible` 把小点藏起来。小点默认在物体正上方，设了 `userData.dotAt = [x, y, z]` 就放在这个位置（Old Gate 门右边的读卡器就是这样把小点放在读卡器左边）。扫描还可以带 `voice: { line, after, gap }`：弹窗打开 `after` 毫秒后，用浏览器自带的语音合成（speechSynthesis，不用音频文件）反复念 `line`，每遍之间停 `gap` 毫秒，关掉弹窗就停。读卡器的学生证弹窗 10 秒后会反复说 "Let us say hello to CCA."。扫描的 `onClose()` 在弹窗关掉时调用：Old Gate 用它把小点从读卡器挪到门把手上（`showDoorDot()`；门本来就能点，小点只是提示），每次进入场景（`enter()`）小点回到读卡器。
 - `sketchbook.js`：工作室里点草图（sketches）后弹出的草图页。`PAGES` 里列着要展示的几页（图片在 `sketches/`，从用户 9 月 17 日和 9 月 24 日的草图本里选的，已经压缩并加深了铅笔线），点最上面一页它会滑走、压到最下面，Esc 或 × 收起。由 `id_studio.js` 的 `useThing("sketches")` 调用 `showSketches()`。
@@ -84,6 +85,6 @@ An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
 2. 在仓库根目录运行 `python3 -m http.server`，再用 Playwright（已经预装）打开页面。确认控制台没有报错，再截图看看改动对不对。WebGL 需要 `--use-gl=swiftshader --enable-unsafe-swiftshader` 这两个参数。
    - 无头浏览器里帧率很低，工作室入夜、小人走路都会比真实浏览器慢很多，要多等一会儿再截图。Paper 以外的画法更慢（Starry Night 大约一秒一帧）。
    - 如果本地服务器起不来（云端会话里可能被权限拦住），可以不开服务器：用 Playwright 的 `page.route` 把页面请求直接对应到磁盘上的文件。
-   - 改了 `atmosphere.js` 或 `styles/` 之后，四种画法在三个场景里都要看一遍，`deviceScaleFactor` 为 1 和 2 各看一次，Wireframe 也要看。
+   - 改了 `atmosphere.js` 或 `styles/` 之后，五种画法在三个场景里都要看一遍，`deviceScaleFactor` 为 1 和 2 各看一次，Wireframe 也要看。
    - Old Gate 的截图里，左上面板正下方偶尔会出现一块纸色的矩形。那是无头浏览器的截图假象（那个位置只有画布，隐藏面板后就消失），不是页面的问题。
 3. 确认没问题后提交，再 push 到 `main`。GitHub Pages 大约一两分钟后更新。

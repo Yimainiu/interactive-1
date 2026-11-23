@@ -3,6 +3,7 @@ import paper from "./styles/paper.js";
 import littlePrince from "./styles/little_prince.js";
 import starryNight from "./styles/starry_night.js";
 import deepSea from "./styles/deep_sea.js";
+import mosaic from "./styles/mosaic.js";
 
 /* ------------------------------------------------------------------
    Atmosphere: the look all the scenes share, so they read as pages of
@@ -34,7 +35,7 @@ import deepSea from "./styles/deep_sea.js";
    scene as it was drawn (tSharp).
 ------------------------------------------------------------------- */
 
-const STYLES = [paper, littlePrince, starryNight, deepSea];
+const STYLES = [paper, littlePrince, starryNight, deepSea, mosaic];
 
 const DEFAULT = {
   sky: { top: "#f6eee9", horizon: "#f6eee9", ground: "#f6eee9" },

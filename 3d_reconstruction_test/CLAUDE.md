@@ -54,7 +54,7 @@ An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
 
 每个场景文件 `export default` 一个对象，包含这些内容：
 
-- `title`、`card`：切换场景时显示的标题卡片，文字都从 `poem.js` 取。`card.number` 是标题上方那行小字，写的是时刻和这一幕的阶段：Old Entrance 是 "Afternoon – Arrival & First Day"，ID Studio 是 "Night – The Middle Years"（大学的中段），Main Gate 是 "Morning – Leave & Graduation"。`card.line` 是这一节诗的第一句。
+- `title`、`card`：切换场景时显示的标题卡片，文字都从 `poem.js` 取。`card.number` 是标题上方那行小字，写的是时刻和这一幕的阶段：Old Entrance 是 "Afternoon – Arrival & First Day"，ID Studio 是 "Night – The Middle Years"（大学的中段），Main Gate 是 "Morning – Leave & Graduation"。`card.line` 是这一节诗的第一句。场景标题卡上，`card.number`（时刻 – 阶段）是大字，`card.title`（地点）是下面一行小号大写、字距很宽的字（CSS 里 `#slate:not(.project):not(.farewell)` 那两条）；开场项目名卡和结局卡不受影响。
 - `layers: [{ key, label }]`：对应面板 Show 下面的复选框。物体建在 `layers.<key>` 里就能被这个复选框开关。要删掉一个选项，就把这一项和所有用到它的代码一起删掉。
 - `views`：相机视角。带 `photo` 的视角会对准原照片的拍摄位置，`fov` 和 `aspect` 按相机参数设置。
 - `intro`：开场先显示哪个视角的照片（标题卡背景也用它）。可选的 `start`：照片淡出后镜头停在哪个视角，不写就停在 `intro`。Old Entrance 的 `start` 是 `door`（从停车场正对亮着的门），Main Gate 的 `start` 是 `walk`（站在院子里，左边是 CCA 的玻璃立面，前方是围栏和门）。

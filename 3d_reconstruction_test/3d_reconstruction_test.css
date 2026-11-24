@@ -655,6 +655,23 @@ body.dark #frame {
   opacity: 1;
 }
 
+/* a scene's card: its hour and stage is the big line, its place the small spaced one under it
+   (the project's card and the goodbye card keep the usual sizes) */
+#slate:not(.project):not(.farewell) .slate-number {
+  max-width: 92vw;
+  font-size: clamp(1.7rem, 4.4vw, 3.3rem);
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+  text-transform: none;
+}
+
+#slate:not(.project):not(.farewell) .slate-title {
+  font-size: clamp(0.75rem, 1.6vw, 0.95rem);
+  letter-spacing: 0.5em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
 /* leaving the main gate: the panels fade while the scene falls away */
 #info,
 #controls,

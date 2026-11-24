@@ -252,7 +252,8 @@ function showScene(key) {
   hint.textContent = def.hint || HINT;
   hideCaption();
   verseQueue.length = 0; // lines still waiting from the scene before are dropped
-  addVerse(key, "open", "", POEM[key].open); // the stanza begins with the line on its card
+  stanzaOf(key); // the stanza's heading
+  if (POEM[key].open) addVerse(key, "open", "", POEM[key].open); // and the line on its card, if it has one
   def.enter?.(); // the scene starts over (the studio goes back to dusk)
 
   viewBox.replaceChildren(
@@ -395,8 +396,8 @@ async function crossTo(key) {
   crossing = false;
 }
 
-// walk toward the door while the next scene's card fades in
-function enterPortal(portal, point) {
+// move toward a point (a door) while the next scene's card fades in
+function goInto(key, point) {
   if (crossing) return;
   const dir = point.clone().sub(camera.position);
   tween = {
@@ -404,7 +405,7 @@ function enterPortal(portal, point) {
     from: { pos: camera.position.clone(), target: controls.target.clone(), fov: camera.fov },
     to: { pos: camera.position.clone().addScaledVector(dir, 0.6), target: point.clone(), fov: camera.fov },
   };
-  crossTo(portal.to);
+  crossTo(key);
 }
 
 // ---------- what a scene can ask for while it plays ----------
@@ -472,17 +473,17 @@ const verseQueue = [];
 let verseAt = -Infinity;
 function stepVerses(now) {
   if (!verseQueue.length || now - verseAt < VERSE_GAP) return;
-  const { key, verse, time, hold } = verseQueue.shift();
+  const { key, verse, time, hold, silent } = verseQueue.shift();
   const v = POEM[key].lines[verse];
   const at = time || v.time;
-  showCaption({ time: at, line: v.text, hold });
+  if (!silent) showCaption({ time: at, line: v.text, hold });
   addVerse(key, verse, at, v.text);
   verseAt = now;
 }
 
-// a scene's update() can return one of these: { verse }, { caption }, { hint }, { look }, { to }
+// a scene's update() can return one of these: { verse }, { caption }, { hint }, { look }, { to, toward }
 function sceneEvent(e) {
-  if (e.verse) verseQueue.push({ key: active, verse: e.verse, time: e.time, hold: e.hold });
+  if (e.verse) verseQueue.push({ key: active, verse: e.verse, time: e.time, hold: e.hold, silent: e.silent });
   if (e.caption) showCaption(e.caption);
   if (e.hint) hint.textContent = e.hint;
   // turn to look at a point, unless it is already well inside the picture
@@ -500,7 +501,9 @@ function sceneEvent(e) {
       };
     }
   }
-  if (e.to) crossTo(e.to); // on to another scene, by way of its title card
+  // on to another scene, by way of its title card (moving in toward a point first, if it names one)
+  if (e.to && e.toward) goInto(e.to, new THREE.Vector3(...e.toward));
+  else if (e.to) crossTo(e.to);
 }
 
 // ---------- page load: the project's name, then scene 1's card, then a click ----------
@@ -664,7 +667,6 @@ canvas.addEventListener("pointerup", (e) => {
   if (moved > 5 || !active || intro || crossing || mode === "photo" || isOpen()) return;
   const hit = pick(built[active], camera, e.clientX, e.clientY, canvas);
   if (hit?.scan) openScan(hit.scan);
-  else if (hit?.portal) enterPortal(hit.portal, hitPoint(e));
   // anything else goes to the scene (the main gate's walker, the studio's things)
   else SCENES[active].click?.(hitsAt(e)[0] || null, ray.ray, hit);
 });
@@ -678,11 +680,6 @@ function hitsAt(e) {
   return ray.intersectObjects(built[active].children, true).filter((h) => !h.object.isSprite && shown(h.object));
 }
 
-// the world point under the pointer, for the dolly toward a door
-function hitPoint(e) {
-  const hits = hitsAt(e);
-  return hits.length ? hits[0].point : controls.target.clone();
-}
 // a pointing hand over anything that opens a scan
 canvas.addEventListener("pointermove", (e) => {
   if (e.buttons || !active || crossing || e.pointerType !== "mouse") return;

@@ -3,12 +3,14 @@
 
    Each scene is a stanza: its hour and stage (the small line on its
    title card), its place (the card's title), an opening line (on the
-   card), then lines that come as you do things in the scene. A scene
-   asks for one of those with { verse: "<key>" } from its update(); the
+   card; a stanza may leave it out), then lines that come as you do
+   things in the scene. A scene asks for one of those with
+   { verse: "<key>" } from its update(); the
    page shows it at the foot of the screen with its time, and adds it
    to the poem in the panel at the top left, so the poem fills in as
    you go. A scene can pass its own time ({ verse, time }) when the
-   hour depends on the order you do things in.
+   hour depends on the order you do things in, and { silent: true }
+   for a line it shows itself (it then only goes into the panel).
 ------------------------------------------------------------------- */
 
 export const POEM = {
@@ -19,10 +21,11 @@ export const POEM = {
     number: "I.",
     stage: "Afternoon – Arrival & First Day",
     place: "Old Entrance",
-    open: "The first time, I came in through this door.",
+    // no line on this card: the stanza starts at the door
     lines: {
-      hello: { time: "1:42 pm", text: "“Hello, CCA.”" }, // the ID card's pop-up opens
-      door: { time: "1:45 pm", text: "I did not know yet how long the afternoon would be." }, // it closes: on to the door
+      first: { time: "1:40 pm", text: "The first time, I came in through this door." }, // the door's dot, the first time
+      hello: { time: "1:42 pm", text: "“Hello, CCA.”" }, // above the ID card, as its pop-up opens
+      door: { time: "1:45 pm", text: "I did not know yet how long the afternoon would be." }, // the door again: then in
     },
   },
 

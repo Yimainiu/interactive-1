@@ -200,14 +200,14 @@ function buildBuilding() {
   spill.position.set(0, y0 + 2.4, 0.9);
   scene.add(spill);
 
-  // invisible click target over the door: it leads into the ID Studio
+  // invisible click target over the door: the stanza begins and ends here (see the ENTRY part below)
   const doorway = new THREE.Mesh(
     new THREE.BoxGeometry(3.1, 2.95, 0.1),
     new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }),
   );
   doorway.position.set(0, y0 + 1.475, -DOOR.depth + 0.14); // clear of the handles, so they don't block a click
-  doorway.userData.portal = { to: "studio" }; // the card comes from the studio scene
-  // its glowing dot, on the handles, only comes on once the ID card has been looked at
+  // its glowing dot sits on the handles
+  doorway.userData.action = "door";
   doorway.userData.marker = true;
   doorway.userData.dotAt = [0, y0 + 1.17, fz + 0.15];
   scene.add(doorway);
@@ -225,15 +225,13 @@ function buildBuilding() {
     src: "models/access_card.glb",
     title: "Student ID card",
     note: "3D scan of the card you tap on this reader to get in.",
-    // ten seconds in, a voice starts saying this, over and over, until the pop-up closes
+    // the poem's "Hello, CCA." stands above the card (and goes into the panel, without a caption)
+    quote: POEM.gate.lines.hello.text,
+    // ten seconds in, a voice starts saying it, over and over, until the pop-up closes
     voice: { line: "Hello, CCA.", after: 10000, gap: 2500 },
-    // the card brings the poem's "Hello, CCA."
-    onOpen: () => say("hello"),
-    // card seen: the dot leaves the reader for the door, and the stanza closes
-    onClose: () => {
-      showDoorDot(true);
-      say("door");
-    },
+    onOpen: () => say("hello", { silent: true }),
+    // card seen: the dot goes back to the door
+    onClose: () => showDoorDot(true),
   };
   reader.userData.dotAt = [1.6, y0 + 1.24, 0.12]; // the glowing dot sits just left of the reader
   scene.add(reader);
@@ -242,16 +240,40 @@ function buildBuilding() {
   entry = { reader, doorway };
 }
 
-// lines of the poem (see poem.js), each once a visit, handed to the page by update()
-const events = [];
-const said = new Set();
-function say(key) {
+/* ==================================================================
+   ENTRY: the first stanza, played at the door
+   The glowing dot starts on the door. Click it: "The first time, I
+   came in through this door.", and the dot moves to the card reader.
+   The reader opens the scanned ID card with "Hello, CCA." above it;
+   close it and the dot is back on the door. Click the door again:
+   "I did not know yet how long the afternoon would be.", and a few
+   seconds later the camera moves in through the door to the studio.
+================================================================== */
+
+const events = []; // handed to the page by update(), one a frame
+const said = new Set(); // the poem's lines said this visit (poem.js)
+const IN_AFTER = 6500; // ms from the last line to going in through the door
+let goingIn = 0; // when the last line was said, or 0
+
+function say(key, extra = {}) {
   if (said.has(key)) return;
   said.add(key);
-  events.push({ verse: key });
+  events.push({ verse: key, ...extra });
 }
 
-// the glowing dot is on the card reader first, then on the door (the dots exist once the page has built the scene)
+function clickDoor(now) {
+  if (goingIn) return;
+  if (!said.has("first")) {
+    say("first");
+    showDoorDot(said.has("hello")); // on to the reader, unless the card has been seen already
+  } else if (said.has("hello")) {
+    say("door");
+    entry.doorway.userData.dot.visible = false;
+    goingIn = now;
+  }
+}
+
+// the glowing dot is on the door or on the card reader (the dots exist once the page has built the scene)
 function showDoorDot(onDoor) {
   if (!entry?.reader.userData.dot) return;
   entry.reader.userData.dot.visible = !onDoor;
@@ -593,8 +615,8 @@ const STREET = [-0.5, 1.5, 7];
 
 export default {
   title: POEM.gate.place,
-  // title card shown before the scene opens: the poem's first stanza begins here
-  card: { number: POEM.gate.stage, title: POEM.gate.place, line: POEM.gate.open },
+  // title card shown before the scene opens (no line of the poem: this stanza begins at the door)
+  card: { number: POEM.gate.stage, title: POEM.gate.place },
   intro: "drone",
   // after the drone photo, the scene settles on this view
   start: "door",
@@ -639,11 +661,17 @@ export default {
     return scene;
   },
 
-  // each time the scene comes on screen: the dot starts back on the card reader
+  // each time the scene comes on screen: the stanza starts over, the dot on the door
   enter() {
-    showDoorDot(false);
+    showDoorDot(true);
     said.clear();
     events.length = 0;
+    goingIn = 0;
+  },
+
+  // a click that wasn't the ID card: the door, perhaps
+  click(hit, ray, picked) {
+    if (picked?.action === "door") clickDoor(performance.now());
   },
 
   // called every frame
@@ -655,6 +683,11 @@ export default {
       g.rotation.z = Math.sin(t * 0.9 + i * 1.9) * 0.012 + Math.sin(t * 2.3 + i) * 0.004;
       g.rotation.x = Math.sin(t * 0.7 + i * 1.1) * 0.008;
     });
-    return events.shift(); // a line of the poem, if one is waiting
+    // after the last line: in through the door, to the studio
+    if (goingIn && now - goingIn > IN_AFTER) {
+      goingIn = 0;
+      events.push({ to: "studio", toward: [0, 1.4, -DOOR.depth] });
+    }
+    return events.shift(); // a line of the poem, or the way in, if one is waiting
   },
 };

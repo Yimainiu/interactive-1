@@ -11,7 +11,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
    through userData.action) get the same marker; the scene can hide it
    with obj.userData.dot.visible. The marker sits above the object, or at
    obj.userData.dotAt ([x, y, z] in the scene) when that is set.
-   A scan with a `voice` also speaks a line over and over while it is open,
+   A scan with a `quote` shows it above the model; one with a `voice`
+   also speaks a line over and over while it is open,
    and its `onOpen()` / `onClose()` are called as the pop-up opens and closes.
 ------------------------------------------------------------------- */
 
@@ -19,6 +20,7 @@ const viewer = document.querySelector("#viewer");
 const viewerCanvas = document.querySelector("#viewer-canvas");
 const viewerTitle = document.querySelector("#viewer-title");
 const viewerNote = document.querySelector("#viewer-note");
+const viewerQuote = document.querySelector("#viewer-quote");
 const viewerStatus = document.querySelector("#viewer-status");
 
 const loader = new GLTFLoader();
@@ -116,6 +118,8 @@ export async function openScan(scan) {
   startVoice(scan.voice, run);
   scan.onOpen?.(); // the scene can follow up as the pop-up opens
   viewerTitle.textContent = scan.title;
+  viewerQuote.textContent = scan.quote || "";
+  viewerQuote.hidden = !scan.quote;
   viewerNote.textContent = scan.note || "";
   viewerStatus.textContent = "Loading…";
   viewer.hidden = false;
@@ -206,7 +210,7 @@ export function pulseMarkers(scene, now) {
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
-// what can be clicked under a screen point: { scan } or { portal }, or null
+// what can be clicked under a screen point: { scan } or { action }, or null
 export function pick(scene, cam, clientX, clientY, canvas) {
   const r = canvas.getBoundingClientRect();
   pointer.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
@@ -215,7 +219,6 @@ export function pick(scene, cam, clientX, clientY, canvas) {
     if (!hit.object.visible) continue;
     for (let o = hit.object.userData.markerOf || hit.object; o; o = o.parent) {
       if (o.userData.scan) return { scan: o.userData.scan };
-      if (o.userData.portal) return { portal: o.userData.portal };
       if (o.userData.action) return { action: o.userData.action };
     }
     // the first visible thing hit is not clickable: something is in front of it

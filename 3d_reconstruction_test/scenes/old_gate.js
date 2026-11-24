@@ -279,7 +279,7 @@ function clickDoor(now) {
   }
 }
 
-// a printed sign: a word in black on white paper, lit like the paper it is on.
+// a printed sign: a word in teal on white paper, lit like the paper it is on.
 // Kept in the shared materials, so the wireframe view turns it to lines with everything else
 function signMaterial(word) {
   const key = `door sign ${word}`;
@@ -290,7 +290,7 @@ function signMaterial(word) {
     const g = cv.getContext("2d");
     g.fillStyle = C.white; // the same paper as the sign under it
     g.fillRect(0, 0, cv.width, cv.height);
-    g.fillStyle = "#1a1a1a";
+    g.fillStyle = "rgb(86, 188, 179)"; // the CCA teal
     g.textAlign = "center";
     g.textBaseline = "middle";
     g.font = "bold 150px Helvetica, Arial, sans-serif";

@@ -666,8 +666,8 @@ body.dark #frame {
 }
 
 #slate:not(.project):not(.farewell) .slate-title {
-  font-size: clamp(0.75rem, 1.6vw, 0.95rem);
-  letter-spacing: 0.5em;
+  font-size: clamp(1rem, 2.3vw, 1.5rem);
+  letter-spacing: 0.4em;
   line-height: 1.4;
   text-transform: uppercase;
 }

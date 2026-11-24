@@ -2,6 +2,7 @@ import * as THREE from "three";
 import {
   reseed,
   rand,
+  materials,
   mat,
   addMesh,
   box,
@@ -187,6 +188,12 @@ function buildBuilding() {
     parts.box(0.36, 0.26, 0.02, C.white, x, y0 + 1.1, fz + 0.04); // paper signs
   }
   for (const x of [-0.12, 0.12]) parts.box(0.03, 0.45, 0.06, "#c9ccce", x, y0 + 0.95, fz + 0.06);
+  // what the paper signs say: "Hello" on the left leaf, "CCA" on the right
+  for (const [x, word] of [[-0.46, "Hello"], [0.46, "CCA"]]) {
+    const words = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.24), signMaterial(word));
+    words.position.set(x, y0 + 1.1 + 0.13, fz + 0.052); // just in front of the paper
+    scene.add(words);
+  }
 
   parts.addTo(scene);
 
@@ -271,6 +278,33 @@ function clickDoor(now) {
     entry.doorway.userData.dot.visible = false;
     goingIn = now;
   }
+}
+
+// a printed sign: a word in black on white paper, lit like the paper it is on.
+// Kept in the shared materials, so the wireframe view turns it to lines with everything else
+function signMaterial(word) {
+  const key = `door sign ${word}`;
+  if (!materials.has(key)) {
+    const cv = document.createElement("canvas");
+    cv.width = 512;
+    cv.height = 362;
+    const g = cv.getContext("2d");
+    g.fillStyle = C.white; // the same paper as the sign under it
+    g.fillRect(0, 0, cv.width, cv.height);
+    g.fillStyle = "#1a1a1a";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.font = "bold 150px Helvetica, Arial, sans-serif";
+    // shrink a long word to fit the sheet with a margin
+    const fit = Math.min(1, (cv.width * 0.82) / g.measureText(word).width);
+    g.font = `bold ${Math.floor(150 * fit)}px Helvetica, Arial, sans-serif`;
+    g.fillText(word, cv.width / 2, cv.height / 2 + 6);
+    const map = new THREE.CanvasTexture(cv);
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.anisotropy = 8;
+    materials.set(key, new THREE.MeshStandardMaterial({ map, roughness: 0.9 }));
+  }
+  return materials.get(key);
 }
 
 // the glowing dot is on the door or on the card reader (the dots exist once the page has built the scene)

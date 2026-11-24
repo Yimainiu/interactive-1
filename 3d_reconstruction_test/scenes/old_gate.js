@@ -14,9 +14,10 @@ import {
   makeLayers,
   standingPerson,
 } from "./lowpoly.js";
+import { POEM } from "../poem.js";
 
 /* ------------------------------------------------------------------
-   Scene 1: Old Gate
+   Scene 1: Old Entrance (the file keeps its first name, old_gate)
    The small side entrance of the school building, rebuilt from a
    drone flight (DJI photos + video) and two phone photos.
 
@@ -225,15 +226,29 @@ function buildBuilding() {
     title: "Student ID card",
     note: "3D scan of the card you tap on this reader to get in.",
     // ten seconds in, a voice starts saying this, over and over, until the pop-up closes
-    voice: { line: "Let us say hello to CCA.", after: 10000, gap: 2500 },
-    // card seen: the dot leaves the reader for the door
-    onClose: () => showDoorDot(true),
+    voice: { line: "Hello, CCA.", after: 10000, gap: 2500 },
+    // the card brings the poem's "Hello, CCA."
+    onOpen: () => say("hello"),
+    // card seen: the dot leaves the reader for the door, and the stanza closes
+    onClose: () => {
+      showDoorDot(true);
+      say("door");
+    },
   };
   reader.userData.dotAt = [1.6, y0 + 1.24, 0.12]; // the glowing dot sits just left of the reader
   scene.add(reader);
   box(reader, 0.09, 0.14, 0.03, C.black, 1.8, y0 + 1.22, 0.015); // card reader
   box(reader, 0.13, 0.06, 0.02, "#2f5fb3", 1.8, y0 + 1.1, 0.01); // "activate switch" label
   entry = { reader, doorway };
+}
+
+// lines of the poem (see poem.js), each once a visit, handed to the page by update()
+const events = [];
+const said = new Set();
+function say(key) {
+  if (said.has(key)) return;
+  said.add(key);
+  events.push({ verse: key });
 }
 
 // the glowing dot is on the card reader first, then on the door (the dots exist once the page has built the scene)
@@ -577,9 +592,9 @@ const DRONE = [5.54, 16.06, 28.49];
 const STREET = [-0.5, 1.5, 7];
 
 export default {
-  title: "Old Gate",
-  // title card shown before the scene opens
-  card: { number: "Afternoon – Arrival & First Day", title: "Old Gate", line: "The first time I walked into CCA, it was through this door, on my way to new student orientation." },
+  title: POEM.gate.place,
+  // title card shown before the scene opens: the poem's first stanza begins here
+  card: { number: POEM.gate.stage, title: POEM.gate.place, line: POEM.gate.open },
   intro: "drone",
   // after the drone photo, the scene settles on this view
   start: "door",
@@ -627,6 +642,8 @@ export default {
   // each time the scene comes on screen: the dot starts back on the card reader
   enter() {
     showDoorDot(false);
+    said.clear();
+    events.length = 0;
   },
 
   // called every frame
@@ -638,5 +655,6 @@ export default {
       g.rotation.z = Math.sin(t * 0.9 + i * 1.9) * 0.012 + Math.sin(t * 2.3 + i) * 0.004;
       g.rotation.x = Math.sin(t * 0.7 + i * 1.1) * 0.008;
     });
+    return events.shift(); // a line of the poem, if one is waiting
   },
 };

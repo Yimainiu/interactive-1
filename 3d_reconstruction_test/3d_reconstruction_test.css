@@ -105,10 +105,66 @@ h1 {
   line-height: 1;
 }
 
-#info p {
+/* ---------- the poem in the top left panel, filling in as you go ---------- */
+
+/* it scrolls once it is long; with the controls folded away it has most of the window */
+#poem {
+  max-height: max(7rem, calc(100vh - 30rem));
+  margin-top: 0.7rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+body:has(#controls.folded) #poem {
+  max-height: calc(100vh - 12rem);
+}
+
+.stanza + .stanza {
+  margin-top: 0.9rem;
+}
+
+/* "I. Old Entrance", and under it the hour and stage */
+.stanza-head {
   margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.45;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.stanza-stage {
+  margin: 0.1rem 0 0.35rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  opacity: 0.65;
+}
+
+.verse {
+  margin: 0 0 0.3rem;
+  font-family: "Didot", "Bodoni 72", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  line-height: 1.35;
+  transition: opacity 1.2s ease, transform 1.2s ease;
+}
+
+.verse.fresh {
+  opacity: 0;
+  transform: translateY(0.3em);
+}
+
+.verse-time {
+  margin-right: 0.5em;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+/* "Goodbye, CCA." */
+.verse.closing {
+  margin-top: 0.6rem;
+  font-style: italic;
 }
 
 h3 {
@@ -717,13 +773,6 @@ body.ending #hint {
   display: none;
 }
 
-/* short windows: the description makes room, so the two panels don't run into each other */
-@media (max-height: 720px) {
-  #info p {
-    display: none;
-  }
-}
-
 /* phones: keep the panels small so the model stays visible */
 @media (max-width: 600px) {
   #info,
@@ -733,7 +782,8 @@ body.ending #hint {
     padding: 0.75rem;
   }
 
-  #info p,
+  /* phones: the poem's lines come at the top of the screen instead (#caption), so the panel stays small */
+  #poem,
   #hint {
     display: none;
   }

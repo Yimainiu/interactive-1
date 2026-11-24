@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { showSketches } from "../sketchbook.js";
+import { POEM } from "../poem.js";
 import {
   reseed,
   rand,
@@ -869,14 +870,8 @@ const HOURS = [
   },
 ];
 
-// the order you use things in sets the hour; what you used sets the words
+// the order you use things in sets the hour; what you used sets the words (poem.js)
 const CLOCK = ["6:50 pm", "9:15 pm", "11:40 pm"];
-const LINES = {
-  sketches: "One more sketch. Then another.",
-  monitor: "The model, rebuilt again.",
-  printer: "The printer starts a long job.",
-  lamp: "The last light on the floor.",
-};
 const WORK = ["sketches", "monitor", "printer"];
 const PER_STEP = 4.5; // seconds one step of the evening takes
 const HOLD = 6500; // ms the lit lamp is held before the morning
@@ -927,14 +922,14 @@ function useThing(name) {
     if (!lampReady) return;
     lampOn = performance.now();
     things.lamp.userData.dot.visible = false;
-    events.push({ caption: { time: "2:10 am", line: LINES.lamp, hold: HOLD - 1200 } }, { hint: "Long past midnight" });
+    events.push({ verse: "lamp", hold: HOLD - 1200 }, { hint: "Long past midnight" });
     return;
   }
   used.add(name);
   things[name].userData.dot.visible = false;
   // the sketches: a few real pages from the sketchbook come up on the screen
   if (name === "sketches") showSketches();
-  events.push({ caption: { time: CLOCK[used.size - 1], line: LINES[name] } });
+  events.push({ verse: name, time: CLOCK[used.size - 1] });
 }
 
 function stepEvening(now) {
@@ -1031,9 +1026,9 @@ function stepEvening(now) {
 const IPHONE = { fov: 55.87, aspect: 4 / 3 };
 
 export default {
-  title: "ID Studio",
-  // title card shown before the scene opens
-  card: { number: "Night – The Middle Year", title: "ID Studio", line: "Through the old gate, into the studio." },
+  title: POEM.studio.place,
+  // title card shown before the scene opens: the poem's second stanza
+  card: { number: POEM.studio.stage, title: POEM.studio.place, line: POEM.studio.open },
   intro: "windows",
   hint: "Click the glowing dots · drag to orbit · scroll to zoom",
   ambience: { sound: "room" }, // the hum of the empty building

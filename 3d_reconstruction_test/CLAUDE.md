@@ -4,13 +4,15 @@
 
 ## 项目名称
 
-**Before the Shadow Settles**
+**Before the Sun Rises**
 An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
 
-"3D Reconstruction Test" 是文件夹名（和主页上的链接文字）；网页标题和左上角面板用的是正式名称 "Before the Shadow Settles"。
+"3D Reconstruction Test" 是文件夹名（和主页上的链接文字）；网页标题和左上角面板用的是正式名称 "Before the Sun Rises"。
+
+整个作品是一首现代诗，分三节，一幕一节（全文在 `poem.js`）：I. Old Entrance（下午，入学第一天），II. ID Studio（深夜，大学中段），III. Main Gate（清晨，离开与毕业）。人称从 I 到 we 再回到 I，全用过去时；"Hello, CCA." 和 "Goodbye, CCA." 一首一尾。
 
 页面是用 three.js 根据照片和无人机素材重建的学校场景，风格是低多边形（low-poly）。
-三个场景是同一种画风、不同的天气和时刻：Old Gate 是雨天，ID Studio 从傍晚到深夜，Main Gate 是清爽微凉的清晨。
+三个场景是同一种画风、不同的天气和时刻：Old Entrance 是雨天，ID Studio 从傍晚到深夜，Main Gate 是清爽微凉的清晨。
 线上地址：https://yimainiu.github.io/interactive-1/3d_reconstruction_test/3d_reconstruction_test.html
 
 ## 工作规则
@@ -35,13 +37,15 @@ An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
   - `deep_sea.js`（Deep Sea）：水下的粒子水墨。冷流是蓝到绿，暖流是紫到橙到金；物体的轮廓顺着水流散成颗粒，亮处发光，有向上漂的光点、顺流的金粉和从水面照下来的光柱。
   - `mosaic.js`（Mosaic）：参考 littleprince.dev 主视觉的小色块水彩（只借技法和配色，没有用它的素材）。物体由一个个不规则的小笔触（按 CSS 像素算的 Voronoi 格子，间距 `DAB`）拼成，每块颜色略有深浅冷暖，边缘积色、块与块之间露一点纸；块的中心落在物体上就盖满整块，所以轮廓是毛茸茸的。场景里本来就有细节的地方（比如墙上的字）让给原像素。天空不管几点都是深海军蓝水彩，带金色四角星（会闪）和细碎的小星点；`dark: true`。线框模式不画色块，线提亮到纸色。
 - `ambience.js`：在浏览器里实时合成的环境声，不用音频文件：`rain`（雨声）、`room`（傍晚空楼里的低鸣）、`morning`（清晨的鸟叫和一点风）。浏览器要求先有点击或按键才能出声，所以第一次点击时才会启动；每种声音第一次用到时才生成。
-- `scans.js`：3D 扫描弹窗。场景里只要有物体带 `userData.scan = { src, title, note }`，就会出现发光的小点，点开后加载对应的 `.glb`。带 `userData.marker = true` 的物体也有同样的小点（配合 `userData.action`，点击交给场景自己的 `click()` 处理），场景可以用 `obj.userData.dot.visible` 把小点藏起来。小点默认在物体正上方，设了 `userData.dotAt = [x, y, z]` 就放在这个位置（Old Gate 门右边的读卡器就是这样把小点放在读卡器左边）。扫描还可以带 `voice: { line, after, gap }`：弹窗打开 `after` 毫秒后，用浏览器自带的语音合成（speechSynthesis，不用音频文件）反复念 `line`，每遍之间停 `gap` 毫秒，关掉弹窗就停。读卡器的学生证弹窗 10 秒后会反复说 "Let us say hello to CCA."。扫描的 `onClose()` 在弹窗关掉时调用：Old Gate 用它把小点从读卡器挪到门把手上（`showDoorDot()`；门本来就能点，小点只是提示），每次进入场景（`enter()`）小点回到读卡器。
+- `scans.js`：3D 扫描弹窗。场景里只要有物体带 `userData.scan = { src, title, note }`，就会出现发光的小点，点开后加载对应的 `.glb`。带 `userData.marker = true` 的物体也有同样的小点（配合 `userData.action`，点击交给场景自己的 `click()` 处理），场景可以用 `obj.userData.dot.visible` 把小点藏起来。小点默认在物体正上方，设了 `userData.dotAt = [x, y, z]` 就放在这个位置（Old Entrance 门右边的读卡器就是这样把小点放在读卡器左边）。扫描还可以带 `voice: { line, after, gap }`：弹窗打开 `after` 毫秒后，用浏览器自带的语音合成（speechSynthesis，不用音频文件）反复念 `line`，每遍之间停 `gap` 毫秒，关掉弹窗就停。读卡器的学生证弹窗 10 秒后会反复说 "Hello, CCA."。扫描的 `onOpen()` / `onClose()` 在弹窗打开、关掉时调用：Old Entrance 打开时念出诗句 "Hello, CCA."，关掉时出下一句诗，并把小点从读卡器挪到门把手上（`showDoorDot()`；门本来就能点，小点只是提示），每次进入场景（`enter()`）小点回到读卡器。
 - `sketchbook.js`：工作室里点草图（sketches）后弹出的草图页。`PAGES` 里列着要展示的几页（图片在 `sketches/`，从用户 9 月 17 日和 9 月 24 日的草图本里选的，已经压缩并加深了铅笔线），点最上面一页它会滑走、压到最下面，Esc 或 × 收起。由 `id_studio.js` 的 `useThing("sketches")` 调用 `showSketches()`。
-- `#caption`：屏幕下方的一行"诗句"（时刻加一句话），由场景在时间推进时发出。
+- `poem.js`：整首诗的文字，改诗只改这里。`POEM.title` / `subtitle` 是开场的项目名；`POEM.gate` / `studio` / `main` 是三节，各有 `number`（I. II. III.）、`stage`（标题卡上的小字）、`place`（标题卡大标题）、`open`（标题卡上的一句，也是这一节在面板里的第一句）和 `lines`（随互动出现的句子，每句有默认时间 `time` 和 `text`）；`POEM.main.goodbye` 是结局卡片和全诗最后一句。场景文件的 `title`、`card` 和结局标题都从这里取。
+- 左上角面板（`#poem`）：标题下面是"到目前为止的诗"。每进入一幕，就加上这一节的标题（如 "I. Old Entrance"）、小字和开头一句；之后每出现一句字幕，就把这句（连同时间）加到这一节末尾，新句子会淡入，面板太长时自己滚动到最新一句。三节总是按 I、II、III 的顺序排，句子按出现的先后排；同一句只加一次。整页刷新后才清空。结局时把 "Goodbye, CCA." 加在最后，点 "Walk back in" 后就能看到完整的最后一节。手机上面板不显示诗（太占地方），诗句只在屏幕上方的字幕里出现。
+- `#caption`：屏幕下方的一行"诗句"（时刻加一句话）。场景用 `{ verse }` 事件请求一句（见下面"场景文件的约定"），主程序把它排进队列，两句之间至少隔 3.8 秒（`VERSE_GAP`），免得一句还没读完就被下一句盖掉；切换场景时没出来的句子会丢掉。
 - `scenes/lowpoly.js`：所有场景共用的建模工具，包括 `box`、`cyl`、`bar`、`place`、`makeLayers`、`standingPerson`、`rand`/`reseed` 等。单位是米。
-- `scenes/old_gate.js`：场景 1 · Old Gate，雨天。点门可以进入 ID Studio（`userData.portal`）。场景里在下雨（雨丝和地面水花，`buildRain()` / `stepRain()`），属于 "Rain" 图层；这个图层打开时会播放雨声。地面是湿的，有积水（`buildPuddles()`）；门和一部分二楼窗户亮着暖光；行道树随风轻晃。
+- `scenes/old_gate.js`：场景 1 · Old Entrance（文件名还是 old_gate，场景的内部名字还是 `gate`），雨天。点门可以进入 ID Studio（`userData.portal`）。场景里在下雨（雨丝和地面水花，`buildRain()` / `stepRain()`），属于 "Rain" 图层；这个图层打开时会播放雨声。地面是湿的，有积水（`buildPuddles()`）；门和一部分二楼窗户亮着暖光；行道树随风轻晃。
 - `scenes/id_studio.js`：场景 2 · ID Studio，从傍晚开始。桌上有三样可以点的东西（草图、显示器、3D 打印机；点草图时还会弹出几页真实的草图，见 `sketchbook.js`），每点一样时间就往夜里走一步（傍晚 → 蓝调时刻 → 夜晚），并显示一行字幕。天全黑以后吊灯上出现小点，点亮它表示已经深夜（灯亮起时会闪几下），几秒后经过标题卡跳到 Main Gate。整套逻辑在文件末尾的 TIME 部分（`HOURS`、`useThing()`、`stepEvening()`）；每次进入场景都会回到傍晚（`enter()`）。
-- `scenes/main_gate.js`：场景 3 · Main Gate，清晨：太阳还低，在桥的后面，影子很长，远处有薄雾；小树和花坛里的草会轻轻晃动（`stir()`）；这一幕没有其他人，也没有旗子（People & flags 图层已删掉）。围栏上有一扇可以走出去的门。院子里有一个可以点击移动的小人（白斗篷、深蓝长袍），会绕开花坛等障碍物，障碍物用 `blocked()` 登记。右边的木结构楼（`buildTimber()`，整栋放在一个组里）一开始藏在地面下面，小人走到离楼角 5 米以内时才从地里升起来，约 4 秒升到位（`RISE`、`stepTimber()`）；每次进入场景（`enter()`）和点 "Walk back in"（`reset()`）后会重新沉下去。小人走出门后进入结局：场景先变成 wireframe，再从院子中间向外破碎散开，最后显示 "Goodbye CCA"。
+- `scenes/main_gate.js`：场景 3 · Main Gate，清晨：太阳还低，在桥的后面，影子很长，远处有薄雾；小树和花坛里的草会轻轻晃动（`stir()`）；这一幕没有其他人，也没有旗子（People & flags 图层已删掉）。围栏上有一扇可以走出去的门。院子里有一个可以点击移动的小人（白斗篷、深蓝长袍），会绕开花坛等障碍物，障碍物用 `blocked()` 登记。右边的木结构楼（`buildTimber()`，整栋放在一个组里）一开始藏在地面下面，小人走到离楼角 5 米以内时才从地里升起来，约 4 秒升到位（`RISE`、`stepTimber()`）；每次进入场景（`enter()`）和点 "Walk back in"（`reset()`）后会重新沉下去。小人走出门后进入结局：场景先变成 wireframe，再从院子中间向外破碎散开，最后显示 "Goodbye, CCA."。这一节的四句诗由 `stepVerses()` 发出：小人第一次走动、木结构楼升起、小人走到离围栏 12 米以内、走到门口；同一次进入场景里每句只出一次，时间按出现的先后取 6:05 / 6:15 / 6:25，门口那句固定 6:30。
 - `photos/`：网页上实际用到的参考照片，已经压缩过。
 - `models/`：扫描模型（`.glb`）。
 - `Space Media/`：原始素材，包括无人机视频、手机照片和视频，一共大约 650 MB。只用来参考，网页不会加载。不要读整个视频，也不要往里加文件。
@@ -50,14 +54,14 @@ An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
 
 每个场景文件 `export default` 一个对象，包含这些内容：
 
-- `title`、`card`：切换场景时显示的标题卡片。`card.number` 是标题上方那行小字，现在写的是时刻和这一幕的阶段：Old Gate 是 "Afternoon – Arrival & First Day"，ID Studio 是 "Night – The Middle Year"（大二左右，学习的中期），Main Gate 是 "Morning – Leave & Graduation"。`card.line` 同时也是左上角面板标题下面的那句介绍，跟着当前场景变（`#scene-line`）。
+- `title`、`card`：切换场景时显示的标题卡片，文字都从 `poem.js` 取。`card.number` 是标题上方那行小字，写的是时刻和这一幕的阶段：Old Entrance 是 "Afternoon – Arrival & First Day"，ID Studio 是 "Night – The Middle Years"（大学的中段），Main Gate 是 "Morning – Leave & Graduation"。`card.line` 是这一节诗的第一句。
 - `layers: [{ key, label }]`：对应面板 Show 下面的复选框。物体建在 `layers.<key>` 里就能被这个复选框开关。要删掉一个选项，就把这一项和所有用到它的代码一起删掉。
 - `views`：相机视角。带 `photo` 的视角会对准原照片的拍摄位置，`fov` 和 `aspect` 按相机参数设置。
-- `intro`：开场先显示哪个视角的照片（标题卡背景也用它）。可选的 `start`：照片淡出后镜头停在哪个视角，不写就停在 `intro`。Old Gate 的 `start` 是 `door`（从停车场正对亮着的门），Main Gate 的 `start` 是 `walk`（站在院子里，左边是 CCA 的玻璃立面，前方是围栏和门）。
+- `intro`：开场先显示哪个视角的照片（标题卡背景也用它）。可选的 `start`：照片淡出后镜头停在哪个视角，不写就停在 `intro`。Old Entrance 的 `start` 是 `door`（从停车场正对亮着的门），Main Gate 的 `start` 是 `walk`（站在院子里，左边是 CCA 的玻璃立面，前方是围栏和门）。
 - `build()`：先调用 `reseed(n)`，再按顺序构建场景。场景自己建灯光。
 - `mood`：这个场景的天气，交给 `atmosphere.js`（再由当前的画法去画，见下面"画法的约定"）。包括 `sky`（`top` / `horizon` / `ground` 三个颜色）、`fog`（`color`、`near`、`far`，以及 `ref`：这组雾是按相机离目标多远调的，拉远时雾会自动后退）、`grade`（`tint`、`saturation`、`grain`、`vignette`）和 `dark`（画面很暗时设为 true，页面上的散字会变成浅色）。场景可以在运行中改这个对象（工作室就是这样从傍晚变到夜里）。
 - 可选项：`ambience: { sound, layer }`（场景在屏幕上时播放的环境声；写了 `layer` 就只在这个图层打开时播放）；`hint`（右下角提示文字）；`enter()`（每次场景出现在屏幕上时调用）；`click(hit, ray, picked)`（点到的不是扫描物体或门时调用，`picked.action` 是点到的物体的 `userData.action`）；`update(camera, now)`（每帧调用）；`ending`（结局的镜头、消解中心和标题）；`reset()`（点 "Walk back in" 后复原）。
-- `update()` 的返回值：`"leave"` 让主程序播放结局；也可以返回一个事件对象，一帧一个：`{ caption: { time, line } }`（显示字幕）、`{ hint }`（换右下角提示）、`{ look: [x, y, z] }`（如果这个点不在画面里，镜头转过去）、`{ to: "main" }`（经过标题卡跳到另一个场景）。
+- `update()` 的返回值：`"leave"` 让主程序播放结局；也可以返回一个事件对象，一帧一个：`{ verse: "<key>", time, hold }`（念 `poem.js` 里这一节 `lines` 的某一句：显示在字幕里，同时加进左上角的诗；`time` 不写就用诗里的默认时间，工作室按点东西的先后给时间）、`{ caption: { time, line } }`（只显示字幕，不进诗）、`{ hint }`（换右下角提示）、`{ look: [x, y, z] }`（如果这个点不在画面里，镜头转过去）、`{ to: "main" }`（经过标题卡跳到另一个场景）。
 - 破碎散开效果在 `lowpoly.js` 的 `dissolvable()`、`shatterable()`、`dissolve` 里。每个三角形是一块碎片，由共用的着色器推动；`dissolve.amount` 从 0 变到 1。
 
 用 `rand()` 的地方顺序很重要。在调用 `rand()` 的代码前面增加或删除东西，后面所有"随机"的树、车的样子都会跟着变。改动时要留意这一点。
@@ -86,5 +90,5 @@ An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA
    - 无头浏览器里帧率很低，工作室入夜、小人走路都会比真实浏览器慢很多，要多等一会儿再截图。Paper 以外的画法更慢（Starry Night 大约一秒一帧）。
    - 如果本地服务器起不来（云端会话里可能被权限拦住），可以不开服务器：用 Playwright 的 `page.route` 把页面请求直接对应到磁盘上的文件。
    - 改了 `atmosphere.js` 或 `styles/` 之后，五种画法在三个场景里都要看一遍，`deviceScaleFactor` 为 1 和 2 各看一次，Wireframe 也要看。
-   - Old Gate 的截图里，左上面板正下方偶尔会出现一块纸色的矩形。那是无头浏览器的截图假象（那个位置只有画布，隐藏面板后就消失），不是页面的问题。
+   - Old Entrance 的截图里，左上面板正下方偶尔会出现一块纸色的矩形。那是无头浏览器的截图假象（那个位置只有画布，隐藏面板后就消失），不是页面的问题。
 3. 确认没问题后提交，再 push 到 `main`。GitHub Pages 大约一两分钟后更新。

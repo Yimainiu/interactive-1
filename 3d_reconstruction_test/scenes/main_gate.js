@@ -15,6 +15,7 @@ import {
   dissolvable,
   shatterable,
 } from "./lowpoly.js";
+import { POEM } from "../poem.js";
 
 /* ------------------------------------------------------------------
    Scene 3: Main Gate & Courtyard
@@ -909,10 +910,39 @@ function stir(now) {
   }
 }
 
+/* ==================================================================
+   THE POEM'S LAST STANZA
+   Its lines (poem.js) come as the walker goes: the first steps, the
+   timber building rising, well on toward the fence, at the gate. Each
+   comes once a visit; the hour goes by the order they come in, and the
+   last one, at the gate, is always 6:30.
+================================================================== */
+
+const events = []; // handed to the page by update(), one a frame
+const said = new Set();
+const CLOCK = ["6:05 am", "6:15 am", "6:25 am"];
+function say(key) {
+  if (said.has(key)) return;
+  said.add(key);
+  const time = key === "leave" ? undefined : CLOCK[Math.min(said.size - 1, CLOCK.length - 1)];
+  events.push({ verse: key, time });
+}
+function stepVerses() {
+  if (walker.path.length) say("letgo");
+  if (rising.on) say("rising");
+  if (walker.z < COURT.z0 + 12) say("marks");
+  const mid = (GATE.x0 + GATE.x1) / 2;
+  if (Math.hypot(walker.x - mid, walker.z - COURT.z0) < 3.2) say("leave");
+}
+function restartVerses() {
+  said.clear();
+  events.length = 0;
+}
+
 export default {
-  title: "Main Gate",
-  // title card shown before the scene opens
-  card: { number: "Morning – Leave & Graduation", title: "Main Gate", line: "Morning. The courtyard at the front of the school." },
+  title: POEM.main.place,
+  // title card shown before the scene opens: the poem's last stanza
+  card: { number: POEM.main.stage, title: POEM.main.place, line: POEM.main.open },
   intro: "drone",
   // after the drone photo, the scene settles on this view
   start: "walk",
@@ -931,7 +961,7 @@ export default {
     view: { pos: [-2, 10, -6], target: [3.9, 1.2, -26], fov: 45 },
     wide: { pos: [-4, 21, 26], target: [3, 0, -18], fov: 45 },
     from: [(BED.x0 + BED.x1) / 2, 0, (BED.z0 + BED.z1) / 2],
-    title: "Goodbye CCA",
+    title: POEM.main.goodbye,
     back: "gate", // the view to come back to
   },
   layers: [
@@ -1023,18 +1053,21 @@ export default {
     const leave = stepWalker(now);
     stepTimber(Math.min((now - (lastRise || now)) / 1000, 0.05));
     lastRise = now;
-    return leave;
+    stepVerses();
+    return leave || events.shift();
   },
 
   // each time the scene comes on screen, the timber building is back under the ground
   enter() {
     sinkTimber();
+    restartVerses();
   },
 
   // back to the start, after the goodbye
   reset() {
     resetWalker();
     sinkTimber();
+    restartVerses();
     if (ring) ring.visible = false;
   },
 };

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>[Tong] Before the Shadow Settles</title>
+    <title>[Tong] Before the Sun Rises</title>
     <link rel="stylesheet" href="3d_reconstruction_test.css" />
     <!-- three.js comes from a CDN, so there is nothing to install -->
     <script type="importmap">
@@ -70,9 +70,9 @@
 
     <header id="info">
       <a id="home" href="../index.html">Home</a>
-      <h1>Before the Shadow Settles</h1>
-      <!-- the scene on screen, in a line: its title card's words, filled in by the script -->
-      <p id="scene-line"></p>
+      <h1>Before the Sun Rises</h1>
+      <!-- the poem, filling in line by line as you go (poem.js); filled in by the script -->
+      <div id="poem" aria-live="polite"></div>
     </header>
 
     <nav id="controls" class="folded">
@@ -80,7 +80,7 @@
       <button id="controls-toggle" aria-expanded="false" aria-controls="controls">Show controls</button>
       <h3>Scene</h3>
       <div id="scenes" class="buttons">
-        <button data-scene="gate">1 · Old Gate</button>
+        <button data-scene="gate">1 · Old Entrance</button>
         <button data-scene="studio">2 · ID Studio</button>
         <button data-scene="main">3 · Main Gate</button>
       </div>

@@ -6,10 +6,11 @@ import idStudio from "./scenes/id_studio.js";
 import mainGate from "./scenes/main_gate.js";
 import { unlockSound, setAmbience } from "./ambience.js";
 import { createAtmosphere } from "./atmosphere.js";
+import { POEM } from "./poem.js";
 import { addMarkers, pulseMarkers, pick, openScan, closeScan, isOpen, renderViewer } from "./scans.js";
 
 /* ------------------------------------------------------------------
-   Before the Shadow Settles (folder: 3d_reconstruction_test)
+   Before the Sun Rises (folder: 3d_reconstruction_test)
    Low-poly scenes rebuilt from photos. Switching scenes first shows
    the photo, then fades it away to reveal the model from the same
    camera position. The panel switches between the photo, the
@@ -53,7 +54,7 @@ const sceneButtons = document.querySelectorAll("#scenes button");
 const modeButtons = document.querySelectorAll("#modes button");
 const styleBox = document.querySelector("#styles");
 const viewBox = document.querySelector("#views");
-const sceneLine = document.querySelector("#scene-line");
+const poemBox = document.querySelector("#poem");
 const layerBox = document.querySelector("#layers");
 const hint = document.querySelector("#hint");
 const caption = document.querySelector("#caption");
@@ -249,8 +250,9 @@ function showScene(key) {
   active = key;
   sceneButtons.forEach((b) => b.classList.toggle("active", b.dataset.scene === key));
   hint.textContent = def.hint || HINT;
-  sceneLine.textContent = def.card.line;
   hideCaption();
+  verseQueue.length = 0; // lines still waiting from the scene before are dropped
+  addVerse(key, "open", "", POEM[key].open); // the stanza begins with the line on its card
   def.enter?.(); // the scene starts over (the studio goes back to dusk)
 
   viewBox.replaceChildren(
@@ -421,8 +423,66 @@ function hideCaption() {
   caption.classList.remove("show");
 }
 
-// a scene's update() can return one of these: { caption }, { hint }, { look }, { to }
+// ---------- the poem: a line at the foot of the screen, and kept in the panel ----------
+
+// The panel at the top left holds the poem as far as you have come: a stanza for each scene,
+// in the poem's order, its lines in the order they came. A line comes once into the panel,
+// however many times its scene says it.
+const ORDER = Object.keys(SCENES);
+function stanzaOf(key) {
+  let stanza = poemBox.querySelector(`.stanza[data-scene="${key}"]`);
+  if (stanza) return stanza;
+  const s = POEM[key];
+  stanza = document.createElement("section");
+  stanza.className = "stanza";
+  stanza.dataset.scene = key;
+  const head = document.createElement("h2");
+  head.className = "stanza-head";
+  head.textContent = `${s.number} ${s.place}`;
+  const stage = document.createElement("p");
+  stage.className = "stanza-stage";
+  stage.textContent = s.stage;
+  stanza.append(head, stage);
+  // in its place among the others
+  const later = [...poemBox.children].find((el) => ORDER.indexOf(el.dataset.scene) > ORDER.indexOf(key));
+  poemBox.insertBefore(stanza, later || null);
+  return stanza;
+}
+function addVerse(key, id, time, text, closing = false) {
+  const stanza = stanzaOf(key);
+  if (stanza.querySelector(`[data-verse="${id}"]`)) return;
+  const line = document.createElement("div");
+  line.className = `verse fresh${closing ? " closing" : ""}`;
+  line.dataset.verse = id;
+  if (time) {
+    const t = document.createElement("span");
+    t.className = "verse-time";
+    t.textContent = time;
+    line.append(t);
+  }
+  line.append(text);
+  stanza.append(line);
+  setTimeout(() => line.classList.remove("fresh"), 50); // fades in
+  poemBox.scrollTo({ top: poemBox.scrollHeight, behavior: "smooth" }); // the newest line in sight
+}
+
+// lines wait their turn, so each stays up long enough to be read before the next one replaces it
+const VERSE_GAP = 3800; // ms
+const verseQueue = [];
+let verseAt = -Infinity;
+function stepVerses(now) {
+  if (!verseQueue.length || now - verseAt < VERSE_GAP) return;
+  const { key, verse, time, hold } = verseQueue.shift();
+  const v = POEM[key].lines[verse];
+  const at = time || v.time;
+  showCaption({ time: at, line: v.text, hold });
+  addVerse(key, verse, at, v.text);
+  verseAt = now;
+}
+
+// a scene's update() can return one of these: { verse }, { caption }, { hint }, { look }, { to }
 function sceneEvent(e) {
+  if (e.verse) verseQueue.push({ key: active, verse: e.verse, time: e.time, hold: e.hold });
   if (e.caption) showCaption(e.caption);
   if (e.hint) hint.textContent = e.hint;
   // turn to look at a point, unless it is already well inside the picture
@@ -445,10 +505,7 @@ function sceneEvent(e) {
 
 // ---------- page load: the project's name, then scene 1's card, then a click ----------
 
-const PROJECT = {
-  title: "Before the Shadow Settles",
-  line: "An Interactive Poem — Documenting an Industrial Design Student’s Life at CCA",
-};
+const PROJECT = { title: POEM.title, line: POEM.subtitle };
 const CARD_SWAP = 2000; // the type fading and the rules drawing back in, per the CSS
 
 // waits on the card for a click or Enter / space
@@ -561,6 +618,7 @@ async function goodbye() {
   await animate(7000, (t) => (dissolve.amount.value = t * t * (3 - 2 * t) * 1.02));
   await wait(500);
 
+  addVerse(key, "goodbye", "", def.ending.title, true); // the poem's last line, there when you walk back in
   slate.querySelector(".slate-number").textContent = "";
   slate.querySelector(".slate-title").textContent = def.ending.title;
   slate.querySelector(".slate-line").textContent = "";
@@ -665,6 +723,7 @@ renderer.setAnimationLoop((now) => {
   const event = SCENES[active].update?.(camera, now);
   if (event === "leave") goodbye();
   else if (event && !crossing) sceneEvent(event);
+  stepVerses(now);
   pulseMarkers(built[active], now);
   controls.enabled = !isOpen() && !ending;
   // a scene's ambient sound, while it's on screen (and its layer, if it names one, is shown)

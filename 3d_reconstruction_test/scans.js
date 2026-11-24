@@ -12,7 +12,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
    with obj.userData.dot.visible. The marker sits above the object, or at
    obj.userData.dotAt ([x, y, z] in the scene) when that is set.
    A scan with a `voice` also speaks a line over and over while it is open,
-   and its `onClose()` is called when the pop-up closes.
+   and its `onOpen()` / `onClose()` are called as the pop-up opens and closes.
 ------------------------------------------------------------------- */
 
 const viewer = document.querySelector("#viewer");
@@ -114,6 +114,7 @@ export async function openScan(scan) {
   opening = run;
   openScanData = scan;
   startVoice(scan.voice, run);
+  scan.onOpen?.(); // the scene can follow up as the pop-up opens
   viewerTitle.textContent = scan.title;
   viewerNote.textContent = scan.note || "";
   viewerStatus.textContent = "Loading…";

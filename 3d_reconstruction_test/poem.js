@@ -49,6 +49,7 @@ export const POEM = {
     open: "Morning. The ravens had gone; soon, so would I.",
     lines: {
       letgo: { time: "6:05 am", text: "I let it go. The scars would heal." }, // the walker's first steps
+      dove: { time: "6:10 am", text: "I was no longer a raven at midnight; I had become a white dove of the morning." }, // the walker's glowing dot
       rising: { time: "6:15 am", text: "Behind us, something new was already rising." }, // the timber building comes up
       marks: { time: "6:25 am", text: "The marks we left would fade, a little more each year." }, // well on toward the fence
       leave: { time: "6:30 am", text: "Before the sun rose, it was time to leave." }, // at the gate

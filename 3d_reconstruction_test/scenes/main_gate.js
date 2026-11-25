@@ -687,6 +687,7 @@ function solid(color, extra = {}) {
 function buildWalker() {
   const g = new THREE.Group();
   g.userData.action = "walker";
+  g.userData.marker = true; // a glowing dot rides over its head until you click it (see stepWalker)
   const body = new THREE.Group(); // bobs while walking
   g.add(body);
   const navy = solid("#2b3557");
@@ -801,6 +802,12 @@ function stepWalker(now) {
   w.cape.rotation.z = moving ? swing * 0.04 : 0;
   w.g.position.set(w.x, w.z < COURT.z0 ? 0.12 : 0, w.z);
   w.g.rotation.y = w.heading;
+  // its glowing dot goes where it goes, until it has been clicked (the white dove) or it is leaving
+  const dot = w.g.userData.dot;
+  if (dot) {
+    dot.position.set(w.x, w.g.position.y + 1.8, w.z);
+    dot.visible = !said.has("dove") && !w.leaving;
+  }
 
   // the gate swings open as the walker comes near it
   const mid = (GATE.x0 + GATE.x1) / 2;
@@ -912,15 +919,16 @@ function stir(now) {
 
 /* ==================================================================
    THE POEM'S LAST STANZA
-   Its lines (poem.js) come as the walker goes: the first steps, the
-   timber building rising, well on toward the fence, at the gate. Each
-   comes once a visit; the hour goes by the order they come in, and the
-   last one, at the gate, is always 6:30.
+   Its lines (poem.js) come as the walker goes: the first steps, a
+   click on the walker itself (the white dove), the timber building
+   rising, well on toward the fence, at the gate. Each comes once a
+   visit; the hour goes by the order they come in, and the last one,
+   at the gate, is always 6:30.
 ================================================================== */
 
 const events = []; // handed to the page by update(), one a frame
 const said = new Set();
-const CLOCK = ["6:05 am", "6:15 am", "6:25 am"];
+const CLOCK = ["6:05 am", "6:10 am", "6:15 am", "6:25 am"];
 function say(key) {
   if (said.has(key)) return;
   said.add(key);
@@ -1027,8 +1035,10 @@ export default {
 
   // a click that didn't hit a scan or a door: `hit` is the first thing under the
   // pointer (or null), `ray` the pointer's ray
-  click(hit, ray) {
+  click(hit, ray, picked) {
     if (walker.leaving) return;
+    // the first click on the walker (or its dot): the raven has become a white dove
+    if (picked?.action === "walker" && !said.has("dove")) return say("dove");
     let through = false; // trees, cars and the walker: walk to the paving behind them
     for (let o = hit?.object; o; o = o.parent) {
       if (o.userData.action === "leave") return leave();
